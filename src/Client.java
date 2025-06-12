@@ -18,20 +18,18 @@ class Client {
                 char cmd = (char) input.read();
                 System.out.println(cmd);
 
-                // Debut de la partie en joueur blanc
+                // Debut de la partie en joueur rouge
                 if (cmd == '1') {
                     byte[] aBuffer = new byte[1024];
 
                     int size = input.available();
-                    //System.out.println("size " + size);
                     input.read(aBuffer, 0, size);
                     String s = new String(aBuffer).trim();
                     System.out.println(s);
-                    String[] boardValues;
-                    boardValues = s.split(" ");
+                    String[] boardValues = s.split(" ");
                     int x = 0, y = 0;
-                    for (int i = 0; i < boardValues.length; i++) {
-                        BOARD[x][y] = Integer.parseInt(boardValues[i]);
+                    for (String boardValue : boardValues) {
+                        BOARD[x][y] = Integer.parseInt(boardValue);
                         x++;
                         if (x == 8) {
                             x = 0;
@@ -39,7 +37,7 @@ class Client {
                         }
                     }
 
-                    System.out.println("Nouvelle partie! Vous jouer blanc, entrez votre premier coup : ");
+                    System.out.println("Nouvelle partie! Vous jouer rouge, entrez votre premier coup : ");
                     String move = console.readLine();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
@@ -47,11 +45,11 @@ class Client {
 
                 // Debut de la partie en joueur Noir
                 if (cmd == '2') {
-                    System.out.println("Nouvelle partie! Vous jouer noir, attendez le coup des blancs");
+                    System.out.println("Nouvelle partie! Vous jouer noir, attendez le coup des rouges");
                     byte[] aBuffer = new byte[1024];
 
                     int size = input.available();
-                    //System.out.println("size " + size);
+                    // System.out.println("size " + size);
                     input.read(aBuffer, 0, size);
                     String s = new String(aBuffer).trim();
                     System.out.println(s);
@@ -59,8 +57,8 @@ class Client {
                     boardValues = s.split(" ");
                     int x = 0, y = 0;
 
-                    for (int i = 0; i < boardValues.length; i++) {
-                        BOARD[x][y] = Integer.parseInt(boardValues[i]);
+                    for (String boardValue : boardValues) {
+                        BOARD[x][y] = Integer.parseInt(boardValue);
                         x++;
                         if (x == 8) {
                             x = 0;
@@ -80,6 +78,9 @@ class Client {
 
                     String s = new String(aBuffer);
                     System.out.println("Dernier coup :" + s);
+
+                    printBoard(BOARD);
+
                     System.out.println("Entrez votre coup : ");
                     String move = console.readLine();
                     output.write(move.getBytes(), 0, move.length());
@@ -108,6 +109,15 @@ class Client {
             }
         } catch (IOException e) {
             System.out.println(e);
+        }
+    }
+
+    private static void printBoard(int[][] board) {
+        for (int[] row : board) {
+            for (int cell : row) {
+                System.out.print(cell + " ");
+            }
+            System.out.println();
         }
     }
 }
