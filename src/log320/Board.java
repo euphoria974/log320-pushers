@@ -8,7 +8,7 @@ import java.util.Stack;
 import static log320.Const.*;
 
 public class Board {
-    private final MoveComparator MOVE_COMPARATOR;
+    private final MoveComparator MOVE_COMPARATOR_RED, MOVE_COMPARATOR_BLACK;
     private final int[][] BOARD = new int[8][8];
     private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
     private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>();
@@ -18,7 +18,8 @@ public class Board {
 
     public Board(String s, Player player) {
         build(s);
-        MOVE_COMPARATOR = new MoveComparator(this, player);
+        MOVE_COMPARATOR_RED = new MoveComparator(this, Player.RED);
+        MOVE_COMPARATOR_BLACK = new MoveComparator(this, Player.BLACK);
 
         for (int i = 0; i < 1000; i++) {
             MOVE_STATE_POOL.add(new UndoMoveState());
@@ -104,9 +105,11 @@ public class Board {
     }
 
     public int evaluate(Player player) {
-        int playerScore = 0, opponentScore = 0;
-        int playerCount = 0, opponentCount = 0;
-        boolean hasPlayerPusher = false, hasOpponentPusher = false;
+        // TODO: retirer des points si des pions sont exposés
+        int score = 0;
+
+        int playerPushers = 0, playerPawns = 0;
+        int opponentPushers = 0, opponentPawns = 0;
 
         for (int row = 0; row < 8; row++) {
             if (BOARD[row][player.getWinningCol()] == player.getPawn() || BOARD[row][player.getWinningCol()] == player.getPusher())
@@ -117,48 +120,87 @@ public class Board {
 
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
-                int piece = BOARD[row][col];
-                boolean isCenter = (row >= 2 && row <= 5) && (col >= 2 && col <= 5);
+                if (BOARD[row][col] == player.getPusher()) {
+                    playerPushers++;
+                    score += player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
 
-                if (piece == player.getPawn()) {
-                    playerScore += 100 + ((player == Player.RED) ? col * 10 : (RED_WINNING_COL - col) * 10);
-                    if (isCenter) playerScore += 20;
-                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) playerScore -= 10;
-                    playerCount++;
-                } else if (piece == player.getPusher()) {
-                    playerScore += 150 + ((player == Player.RED) ? col * 15 : (RED_WINNING_COL - col) * 15);
-                    if (isCenter) playerScore += 30;
-                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) playerScore -= 15;
-                    if ((player == Player.RED && col < 7 && BOARD[row][col + 1] == player.getOpponent().getPusher()) ||
-                            (player == Player.BLACK && col > 0 && BOARD[row][col - 1] == player.getOpponent().getPusher())) {
-                        playerScore += 40;
+                    if (col == player.getWinningCol()) {
+                        score += 500;
                     }
-                    hasPlayerPusher = true;
-                    playerCount++;
-                } else if (piece == player.getOpponent().getPawn()) {
-                    opponentScore += 100 + ((player.getOpponent() == Player.RED) ? col * 10 : (RED_WINNING_COL - col) * 10);
-                    if (isCenter) opponentScore += 20;
-                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) opponentScore -= 10;
-                    opponentCount++;
-                } else if (piece == player.getOpponent().getPusher()) {
-                    opponentScore += 150 + ((player.getOpponent() == Player.RED) ? col * 15 : (RED_WINNING_COL - col) * 15);
-                    if (isCenter) opponentScore += 30;
-                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) opponentScore -= 15;
-                    if ((player.getOpponent() == Player.RED && col < 7 && BOARD[row][col + 1] == player.getPusher()) ||
-                            (player.getOpponent() == Player.BLACK && col > 0 && BOARD[row][col - 1] == player.getPusher())) {
-                        opponentScore += 40;
+                } else if (BOARD[row][col] == player.getOpponent().getPusher()) {
+                    opponentPushers++;
+                    score -= player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+                } else if (BOARD[row][col] == player.getPawn()) {
+                    playerPawns++;
+                    score += player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+
+                    if (col == player.getWinningCol()) {
+                        score += 500;
                     }
-                    hasOpponentPusher = true;
-                    opponentCount++;
+                } else if (BOARD[row][col] == player.getOpponent().getPawn()) {
+                    opponentPawns++;
+                    score -= player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+                }
+
+                if ((BOARD[row][col] == player.getPawn() || BOARD[row][col] == player.getPusher()) && row >= 2 && row <= 5) {
+                    score += 15;
                 }
             }
         }
 
-        if (!hasPlayerPusher) return LOSS_SCORE;
-        if (!hasOpponentPusher) return WIN_SCORE;
+        if (opponentPushers == 0) {
+            return WIN_SCORE;
+        }
 
-        playerScore += (playerCount - opponentCount) * 50;
-        return playerScore - opponentScore;
+        if (playerPushers == 0) {
+            return LOSS_SCORE;
+        }
+
+        score += (playerPushers * 300 + playerPawns * 100) - (opponentPushers * 300 + opponentPawns * 100);
+
+        List<String> myMoves = getPossibleMoves(player);
+        List<String> oppMoves = getPossibleMoves(player.getOpponent());
+        score += (myMoves.size() - oppMoves.size()) * 10;
+
+        score += 20 * countPotentialPushes(player);
+
+        return score;
+    }
+
+    private int countPotentialPushes(Player player) {
+        int count = 0;
+
+        for (int row = 0; row < 8; row++) {
+            for (int col = player == Player.RED ? 0 : 1; col < (player == Player.RED ? 7 : 8); col++) {
+                boolean isPusher = false;
+                if (BOARD[row][col] == player.getPusher()) {
+                    isPusher = true;
+                }
+
+                if (isPusher) {
+                    int piece = BOARD[row][col + player.getForwardColumn()];
+                    if (piece == player.getPawn()) {
+                        count++;
+                    }
+
+                    if (row > 0) {
+                        piece = BOARD[row - 1][col + player.getForwardColumn()];
+                        if (piece == player.getPawn()) {
+                            count++;
+                        }
+                    }
+
+                    if (row < 7) {
+                        piece = BOARD[row + 1][col + player.getForwardColumn()];
+                        if (piece == player.getPawn()) {
+                            count++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return count;
     }
 
     public ArrayList<String> getPossibleMoves(Player player) {
@@ -168,86 +210,47 @@ public class Board {
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 if (BOARD[row][col] == player.getPawn()) {
-                    if (player == Player.RED) {
-                        if (BOARD[row][col + 1] == EMPTY && BOARD[row][col - 1] == player.getPusher()) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 2);
-                            possibleMoves.add(sb.toString());
-                        }
+                    if (BOARD[row][col + player.getForwardColumn()] == EMPTY && BOARD[row][col - player.getForwardColumn()] == player.getPusher()) {
+                        sb.setLength(0);
+                        sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 1 + player.getForwardColumn());
+                        possibleMoves.add(sb.toString());
+                    }
 
-                        if (row > 0 && row < 7 && BOARD[row + 1][col - 1] == player.getPusher() && ((BOARD[row - 1][col + 1] == EMPTY || BOARD[row - 1][col + 1] == player.getOpponent().getPawn() || BOARD[row - 1][col + 1] == player.getOpponent().getPusher()))) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 2);
-                            possibleMoves.add(sb.toString());
-                        }
+                    if (row > 0 && row < 7 && BOARD[row + 1][col - player.getForwardColumn()] == player.getPusher() && ((BOARD[row - 1][col + player.getForwardColumn()] == EMPTY || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPusher()))) {
+                        sb.setLength(0);
+                        sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 1 + player.getForwardColumn());
+                        possibleMoves.add(sb.toString());
+                    }
 
-                        if (row > 0 && row < 7 && BOARD[row - 1][col - 1] == player.getPusher() && ((BOARD[row + 1][col + 1] == EMPTY || BOARD[row + 1][col + 1] == player.getOpponent().getPawn() || BOARD[row + 1][col + 1] == player.getOpponent().getPusher()))) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 2);
-                            possibleMoves.add(sb.toString());
-                        }
-                    } else { // PETIT NOIR
-                        if (BOARD[row][col - 1] == EMPTY && BOARD[row][col + 1] == player.getPusher()) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col);
-                            possibleMoves.add(sb.toString());
-                        }
-
-                        if (row > 0 && row < 7 && BOARD[row + 1][col + 1] == player.getPusher() && ((BOARD[row - 1][col - 1] == EMPTY || BOARD[row - 1][col - 1] == player.getOpponent().getPawn() || BOARD[row - 1][col - 1] == player.getOpponent().getPusher()))) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col);
-                            possibleMoves.add(sb.toString());
-                        }
-
-                        if (row > 0 && row < 7 && BOARD[row - 1][col + 1] == player.getPusher() && (BOARD[row + 1][col - 1] == EMPTY || BOARD[row + 1][col - 1] == player.getOpponent().getPawn() || BOARD[row + 1][col - 1] == player.getOpponent().getPusher())) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col);
-                            possibleMoves.add(sb.toString());
-                        }
+                    if (row > 0 && row < 7 && BOARD[row - 1][col - player.getForwardColumn()] == player.getPusher() && ((BOARD[row + 1][col + player.getForwardColumn()] == EMPTY || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPusher()))) {
+                        sb.setLength(0);
+                        sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 1 + player.getForwardColumn());
+                        possibleMoves.add(sb.toString());
                     }
                 } else if (BOARD[row][col] == player.getPusher()) {
-                    if (player == Player.RED && col < 7) { // PUSHER ROUGE
-                        if (BOARD[row][col + 1] == EMPTY) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 2);
-                            possibleMoves.add(sb.toString());
-                        }
+                    if (BOARD[row][col + player.getForwardColumn()] == EMPTY) {
+                        sb.setLength(0);
+                        sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 1 + player.getForwardColumn());
+                        possibleMoves.add(sb.toString());
+                    }
 
-                        if (row > 0 && (BOARD[row - 1][col + 1] == EMPTY || BOARD[row - 1][col + 1] == player.getOpponent().getPawn() || BOARD[row - 1][col + 1] == player.getOpponent().getPusher())) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 2);
-                            possibleMoves.add(sb.toString());
-                        }
+                    if (row > 0 && (BOARD[row - 1][col + player.getForwardColumn()] == EMPTY || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPusher())) {
+                        sb.setLength(0);
+                        sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 1 + player.getForwardColumn());
+                        possibleMoves.add(sb.toString());
+                    }
 
-                        if (row < 7 && (BOARD[row + 1][col + 1] == EMPTY || BOARD[row + 1][col + 1] == player.getOpponent().getPawn() || BOARD[row + 1][col + 1] == player.getOpponent().getPusher())) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 2);
-                            possibleMoves.add(sb.toString());
-                        }
-                    } else if (col > 0) { // PUSHER NOIR
-                        if (BOARD[row][col - 1] == EMPTY) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col);
-                            possibleMoves.add(sb.toString());
-                        }
-
-                        if (row > 0 && (BOARD[row - 1][col - 1] == EMPTY || BOARD[row - 1][col - 1] == player.getOpponent().getPawn() || BOARD[row - 1][col - 1] == player.getOpponent().getPusher())) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col);
-                            possibleMoves.add(sb.toString());
-                        }
-
-                        if (row < 7 && (BOARD[row + 1][col - 1] == EMPTY || BOARD[row + 1][col - 1] == player.getOpponent().getPawn() || BOARD[row + 1][col - 1] == player.getOpponent().getPusher())) {
-                            sb.setLength(0);
-                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col);
-                            possibleMoves.add(sb.toString());
-                        }
+                    if (row < 7 && (BOARD[row + 1][col + player.getForwardColumn()] == EMPTY || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPusher())) {
+                        sb.setLength(0);
+                        sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 1 + player.getForwardColumn());
+                        possibleMoves.add(sb.toString());
                     }
                 }
             }
         }
 
-        possibleMoves.sort(MOVE_COMPARATOR);
+        // TODO: Sort the possible moves based on heuristics
+        // possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
         return possibleMoves;
     }
 }

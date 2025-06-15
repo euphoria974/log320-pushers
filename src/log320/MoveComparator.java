@@ -28,20 +28,95 @@ public class MoveComparator implements Comparator<String> {
 
         int score = 0;
 
-        if (toCol == PLAYER.getWinningCol()) {
-            score += 10000;
-        }
+        // Près de la victoire
+        if (toCol == PLAYER.getWinningCol()) score += 10000;
+        else if (toCol == PLAYER.getWinningCol() - PLAYER.getForwardColumn()) score += 800;
+        else if (toCol == PLAYER.getWinningCol() - 2 * PLAYER.getForwardColumn()) score += 500;
 
-        score += (PLAYER == Player.RED) ? (toCol - fromCol) * 10 : (fromCol - toCol) * 10;
+        // Capture
+        if (dest == PLAYER.getOpponent().getPusher()) score += 1000;
+        else if (dest == PLAYER.getOpponent().getPawn()) score += 200;
 
-        if (dest == PLAYER.getOpponent().getPawn() || dest == PLAYER.getOpponent().getPusher()) {
+        // Se met devant un pusher
+        int forwardCol = toCol + PLAYER.getForwardColumn();
+        if (forwardCol < 8 && forwardCol > 0 && BOARD[toRow][forwardCol] == PLAYER.getOpponent().getPusher()) {
             score += 500;
         }
 
+        // Contrôle le centre
+        if (toRow >= 2 && toRow <= 5) score += 100;
+
+        // Petit jouable
         if (movedPiece == PLAYER.getPawn()) {
             score += 30;
+            int backCol = fromCol - PLAYER.getForwardColumn();
+            if (backCol >= 0 && backCol < 8 && BOARD[fromRow][backCol] == PLAYER.getPusher()) {
+                score += 50;
+            }
+        }
+
+        // Safe après le coup
+        if (isExposedAfterMove(toRow, toCol)) {
+            score -= 300;
+        } else {
+            score += 200;
+        }
+
+        int playerPawnCount = 0;
+        for (int r = 0; r < 8; r++) {
+            for (int c = 0; c < 8; c++) {
+                if (BOARD[r][c] == PLAYER.getPawn()) playerPawnCount++;
+            }
+        }
+
+        if (movedPiece == PLAYER.getPawn() && playerPawnCount > 4) {
+            score += 300;
+        }
+
+        if (movedPiece == PLAYER.getPusher() && playerPawnCount > 4) {
+            score -= 300;
         }
 
         return score;
+    }
+
+    private boolean isExposedAfterMove(int toRow, int toCol) {
+        int opponentForward = PLAYER.getOpponent().getForwardColumn();
+        int playerForward = PLAYER.getForwardColumn();
+
+        int[][] threatDiagonals = {
+                {-1, opponentForward},
+                {1, opponentForward}
+        };
+        boolean threatened = false;
+        for (int[] dir : threatDiagonals) {
+            int row = toRow + dir[0];
+            int col = toCol + dir[1];
+            if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+                if (BOARD[row][col] == PLAYER.getOpponent().getPusher()) {
+                    threatened = true;
+                    break;
+                }
+            }
+        }
+
+        int[][] protectDiagonals = {
+                {-1, -playerForward},
+                {1, -playerForward}
+        };
+        boolean protectedByPusher = false;
+
+        for (int[] dir : protectDiagonals) {
+            int row = toRow + dir[0];
+            int col = toCol + dir[1];
+            if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+                if (BOARD[row][col] == PLAYER.getPusher()) {
+                    protectedByPusher = true;
+                    break;
+                }
+            }
+        }
+
+        return threatened && !protectedByPusher;
     }
 }

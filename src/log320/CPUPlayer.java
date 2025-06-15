@@ -49,6 +49,11 @@ public class CPUPlayer {
             depth++;
         }
 
+        // Si aucun coup n'a été trouvé, on choisit un coup aléatoire
+        if (bestMoves.isEmpty()) {
+            bestMoves.add(BOARD.getPossibleMoves(PLAYER).get(RANDOM.nextInt(BOARD.getPossibleMoves(PLAYER).size())));
+        }
+
         return bestMoves;
     }
 
