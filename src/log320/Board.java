@@ -5,18 +5,24 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
 
-import static log320.Const.WIN_SCORE;
+import static log320.Const.*;
 
 public class Board {
     private final MoveComparator MOVE_COMPARATOR;
     private final int[][] BOARD = new int[8][8];
-    private final Stack<MoveState> MOVE_STACK = new Stack<>();
+    private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
+    private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>();
 
     private String lastMove = "";
+    private int moveStatePoolIndex = 0;
 
-    public Board(String s, int player) {
+    public Board(String s, Player player) {
         build(s);
         MOVE_COMPARATOR = new MoveComparator(this, player);
+
+        for (int i = 0; i < 1000; i++) {
+            MOVE_STATE_POOL.add(new UndoMoveState());
+        }
     }
 
     public int[][] getBoard() {
@@ -28,15 +34,20 @@ public class Board {
     }
 
     public void build(String s) {
-        List<String> boardValues = Arrays.asList(s.split(" ")).reversed();
+        String[] boardValues = s.split(" ");
 
-        int row = 0, col = 0;
+        int row = 0, col = 7;
         for (String boardValue : boardValues) {
             BOARD[row][col] = Integer.parseInt(boardValue);
+
             row++;
-            if (row == 8) {
-                col++;
+            if (row > 7) {
                 row = 0;
+                col--;
+            }
+
+            if (col < 0) {
+                break;
             }
         }
     }
@@ -45,13 +56,13 @@ public class Board {
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 if (j == 0) {
-                    BOARD[i][j] = 4;
+                    BOARD[i][j] = RED_PUSHER;
                 } else if (j == 1) {
-                    BOARD[i][j] = 3;
+                    BOARD[i][j] = RED_PAWN;
                 } else if (j == 6) {
-                    BOARD[i][j] = 1;
+                    BOARD[i][j] = BLACK_PAWN;
                 } else if (j == 7) {
-                    BOARD[i][j] = 2;
+                    BOARD[i][j] = BLACK_PUSHER;
                 }
             }
         }
@@ -66,44 +77,42 @@ public class Board {
     public void play(String move) {
         lastMove = move;
 
-        int fromRow = move.charAt(0) - 65;
+        int fromRow = move.charAt(0) - CHAR_TO_ROW;
         int fromCol = Character.getNumericValue(move.charAt(1)) - 1;
-        int toRow = move.charAt(2) - 65;
+        int toRow = move.charAt(2) - CHAR_TO_ROW;
         int toCol = Character.getNumericValue(move.charAt(3)) - 1;
         int movedPiece = BOARD[fromRow][fromCol];
         int capturedPiece = BOARD[toRow][toCol];
 
-        MOVE_STACK.push(new MoveState(fromRow, fromCol, toRow, toCol, movedPiece, capturedPiece));
+        UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
+        MOVE_STACK.push(ms.update(fromRow, fromCol, toRow, toCol, movedPiece, capturedPiece));
 
-        BOARD[fromRow][fromCol] = 0;
+        BOARD[fromRow][fromCol] = EMPTY;
         BOARD[toRow][toCol] = movedPiece;
     }
 
     public void undo() {
         if (MOVE_STACK.isEmpty()) return;
-        MoveState ms = MOVE_STACK.pop();
+        UndoMoveState ms = MOVE_STACK.pop();
         BOARD[ms.toRow][ms.toCol] = ms.capturedPiece;
         BOARD[ms.fromRow][ms.fromCol] = ms.movedPiece;
+        moveStatePoolIndex--;
     }
 
-    public boolean hasWon(int player) {
+    public boolean hasWon(Player player) {
         return evaluate(player) == WIN_SCORE;
     }
 
-    public int evaluate(int player) {
-        int opponent = player == 3 ? 1 : 3;
-        int playerWinningCol = player == 3 ? 7 : 0;
-        int opponentWinningCol = opponent == 3 ? 7 : 0;
-        int playerPusher = player + 1;
-        int opponentPusher = opponent + 1;
-
+    public int evaluate(Player player) {
         int playerScore = 0, opponentScore = 0;
         int playerCount = 0, opponentCount = 0;
         boolean hasPlayerPusher = false, hasOpponentPusher = false;
 
         for (int row = 0; row < 8; row++) {
-            if (BOARD[row][playerWinningCol] == player) return Const.WIN_SCORE;
-            if (BOARD[row][opponentWinningCol] == opponent) return Const.LOSS_SCORE;
+            if (BOARD[row][player.getWinningCol()] == player.getPawn() || BOARD[row][player.getWinningCol()] == player.getPusher())
+                return WIN_SCORE;
+            if (BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPawn() || BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPusher())
+                return LOSS_SCORE;
         }
 
         for (int row = 0; row < 8; row++) {
@@ -111,32 +120,32 @@ public class Board {
                 int piece = BOARD[row][col];
                 boolean isCenter = (row >= 2 && row <= 5) && (col >= 2 && col <= 5);
 
-                if (piece == player) {
-                    playerScore += 100 + ((player == 3) ? col * 10 : (7 - col) * 10);
+                if (piece == player.getPawn()) {
+                    playerScore += 100 + ((player == Player.RED) ? col * 10 : (RED_WINNING_COL - col) * 10);
                     if (isCenter) playerScore += 20;
-                    if (col == 0 || col == 7) playerScore -= 10;
+                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) playerScore -= 10;
                     playerCount++;
-                } else if (piece == playerPusher) {
-                    playerScore += 150 + ((player == 3) ? col * 15 : (7 - col) * 15);
+                } else if (piece == player.getPusher()) {
+                    playerScore += 150 + ((player == Player.RED) ? col * 15 : (RED_WINNING_COL - col) * 15);
                     if (isCenter) playerScore += 30;
-                    if (col == 0 || col == 7) playerScore -= 15;
-                    if ((player == 3 && col < 7 && BOARD[row][col + 1] == opponentPusher) ||
-                            (player == 1 && col > 0 && BOARD[row][col - 1] == opponentPusher)) {
+                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) playerScore -= 15;
+                    if ((player == Player.RED && col < 7 && BOARD[row][col + 1] == player.getOpponent().getPusher()) ||
+                            (player == Player.BLACK && col > 0 && BOARD[row][col - 1] == player.getOpponent().getPusher())) {
                         playerScore += 40;
                     }
                     hasPlayerPusher = true;
                     playerCount++;
-                } else if (piece == opponent) {
-                    opponentScore += 100 + ((opponent == 3) ? col * 10 : (7 - col) * 10);
+                } else if (piece == player.getOpponent().getPawn()) {
+                    opponentScore += 100 + ((player.getOpponent() == Player.RED) ? col * 10 : (RED_WINNING_COL - col) * 10);
                     if (isCenter) opponentScore += 20;
-                    if (col == 0 || col == 7) opponentScore -= 10;
+                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) opponentScore -= 10;
                     opponentCount++;
-                } else if (piece == opponentPusher) {
-                    opponentScore += 150 + ((opponent == 3) ? col * 15 : (7 - col) * 15);
+                } else if (piece == player.getOpponent().getPusher()) {
+                    opponentScore += 150 + ((player.getOpponent() == Player.RED) ? col * 15 : (RED_WINNING_COL - col) * 15);
                     if (isCenter) opponentScore += 30;
-                    if (col == 0 || col == 7) opponentScore -= 15;
-                    if ((opponent == 3 && col < 7 && BOARD[row][col + 1] == playerPusher) ||
-                            (opponent == 1 && col > 0 && BOARD[row][col - 1] == playerPusher)) {
+                    if (col == BLACK_WINNING_COL || col == RED_WINNING_COL) opponentScore -= 15;
+                    if ((player.getOpponent() == Player.RED && col < 7 && BOARD[row][col + 1] == player.getPusher()) ||
+                            (player.getOpponent() == Player.BLACK && col > 0 && BOARD[row][col - 1] == player.getPusher())) {
                         opponentScore += 40;
                     }
                     hasOpponentPusher = true;
@@ -145,93 +154,92 @@ public class Board {
             }
         }
 
-        if (!hasPlayerPusher) return Const.LOSS_SCORE;
-        if (!hasOpponentPusher) return Const.WIN_SCORE;
+        if (!hasPlayerPusher) return LOSS_SCORE;
+        if (!hasOpponentPusher) return WIN_SCORE;
 
         playerScore += (playerCount - opponentCount) * 50;
         return playerScore - opponentScore;
     }
 
-    public ArrayList<String> getPossibleMoves(int player) {
+    public ArrayList<String> getPossibleMoves(Player player) {
         ArrayList<String> possibleMoves = new ArrayList<>(32);
-        int enemyPlayer = player == 3 ? 1 : 3;
         StringBuilder sb = new StringBuilder(4);
 
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
-                if (BOARD[row][col] == player) {
-                    if (player == 3) { // PETIT ROUGE
-                        if (BOARD[row][col + 1] == 0 && BOARD[row][col - 1] == player + 1) {
+                if (BOARD[row][col] == player.getPawn()) {
+                    if (player == Player.RED) {
+                        if (BOARD[row][col + 1] == EMPTY && BOARD[row][col - 1] == player.getPusher()) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 65)).append(col + 2);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 2);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row > 0 && row < 7 && ((BOARD[row - 1][col + 1] == 0 || BOARD[row - 1][col + 1] == enemyPlayer || BOARD[row - 1][col + 1] == enemyPlayer + 1) && BOARD[row + 1][col - 1] == player + 1)) {
+                        if (row > 0 && row < 7 && BOARD[row + 1][col - 1] == player.getPusher() && ((BOARD[row - 1][col + 1] == EMPTY || BOARD[row - 1][col + 1] == player.getOpponent().getPawn() || BOARD[row - 1][col + 1] == player.getOpponent().getPusher()))) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 64)).append(col + 2);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 2);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row > 0 && row < 7 && ((BOARD[row + 1][col + 1] == 0 || BOARD[row + 1][col + 1] == enemyPlayer || BOARD[row + 1][col + 1] == enemyPlayer + 1) && BOARD[row - 1][col - 1] == player + 1)) {
+                        if (row > 0 && row < 7 && BOARD[row - 1][col - 1] == player.getPusher() && ((BOARD[row + 1][col + 1] == EMPTY || BOARD[row + 1][col + 1] == player.getOpponent().getPawn() || BOARD[row + 1][col + 1] == player.getOpponent().getPusher()))) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 66)).append(col + 2);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 2);
                             possibleMoves.add(sb.toString());
                         }
                     } else { // PETIT NOIR
-                        if (BOARD[row][col - 1] == 0 && BOARD[row][col + 1] == player + 1) {
+                        if (BOARD[row][col - 1] == EMPTY && BOARD[row][col + 1] == player.getPusher()) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 65)).append(col);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row > 0 && row < 7 && ((BOARD[row - 1][col - 1] == 0 || BOARD[row - 1][col - 1] == enemyPlayer || BOARD[row - 1][col - 1] == enemyPlayer + 1) && BOARD[row + 1][col + 1] == player + 1)) {
+                        if (row > 0 && row < 7 && BOARD[row + 1][col + 1] == player.getPusher() && ((BOARD[row - 1][col - 1] == EMPTY || BOARD[row - 1][col - 1] == player.getOpponent().getPawn() || BOARD[row - 1][col - 1] == player.getOpponent().getPusher()))) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 64)).append(col);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row > 0 && row < 7 && (BOARD[row + 1][col - 1] == 0 || BOARD[row + 1][col - 1] == enemyPlayer || BOARD[row + 1][col - 1] == enemyPlayer + 1) && BOARD[row - 1][col + 1] == player + 1) {
+                        if (row > 0 && row < 7 && BOARD[row - 1][col + 1] == player.getPusher() && (BOARD[row + 1][col - 1] == EMPTY || BOARD[row + 1][col - 1] == player.getOpponent().getPawn() || BOARD[row + 1][col - 1] == player.getOpponent().getPusher())) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 66)).append(col);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col);
                             possibleMoves.add(sb.toString());
                         }
                     }
-                } else if (BOARD[row][col] == player + 1) {
-                    if (player == 3 && col < 7) { // PUSHER ROUGE
-                        if (BOARD[row][col + 1] == 0) {
+                } else if (BOARD[row][col] == player.getPusher()) {
+                    if (player == Player.RED && col < 7) { // PUSHER ROUGE
+                        if (BOARD[row][col + 1] == EMPTY) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 65)).append(col + 2);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 2);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row > 0 && (BOARD[row - 1][col + 1] == 0 || BOARD[row - 1][col + 1] == enemyPlayer || BOARD[row - 1][col + 1] == enemyPlayer + 1)) {
+                        if (row > 0 && (BOARD[row - 1][col + 1] == EMPTY || BOARD[row - 1][col + 1] == player.getOpponent().getPawn() || BOARD[row - 1][col + 1] == player.getOpponent().getPusher())) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 64)).append(col + 2);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 2);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row < 7 && (BOARD[row + 1][col + 1] == 0 || BOARD[row + 1][col + 1] == enemyPlayer || BOARD[row + 1][col + 1] == enemyPlayer + 1)) {
+                        if (row < 7 && (BOARD[row + 1][col + 1] == EMPTY || BOARD[row + 1][col + 1] == player.getOpponent().getPawn() || BOARD[row + 1][col + 1] == player.getOpponent().getPusher())) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 66)).append(col + 2);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 2);
                             possibleMoves.add(sb.toString());
                         }
                     } else if (col > 0) { // PUSHER NOIR
-                        if (BOARD[row][col - 1] == 0) {
+                        if (BOARD[row][col - 1] == EMPTY) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 65)).append(col);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row > 0 && (BOARD[row - 1][col - 1] == 0 || BOARD[row - 1][col - 1] == enemyPlayer || BOARD[row - 1][col - 1] == enemyPlayer + 1)) {
+                        if (row > 0 && (BOARD[row - 1][col - 1] == EMPTY || BOARD[row - 1][col - 1] == player.getOpponent().getPawn() || BOARD[row - 1][col - 1] == player.getOpponent().getPusher())) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 64)).append(col);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col);
                             possibleMoves.add(sb.toString());
                         }
 
-                        if (row < 7 && (BOARD[row + 1][col - 1] == 0 || BOARD[row + 1][col - 1] == enemyPlayer || BOARD[row + 1][col - 1] == enemyPlayer + 1)) {
+                        if (row < 7 && (BOARD[row + 1][col - 1] == EMPTY || BOARD[row + 1][col - 1] == player.getOpponent().getPawn() || BOARD[row + 1][col - 1] == player.getOpponent().getPusher())) {
                             sb.setLength(0);
-                            sb.append((char) (row + 65)).append(col + 1).append((char) (row + 66)).append(col);
+                            sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col);
                             possibleMoves.add(sb.toString());
                         }
                     }

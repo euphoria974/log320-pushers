@@ -4,20 +4,8 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
-
-import static log320.Const.RANDOM;
 
 class Client {
-    // 0: case vide
-    // 1: petit noir
-    // 2: gros noir
-    // 3: petit rouge
-    // 4: gros rouge
-
-    private static Board board;
-    private static CPUPlayer cpuPlayer;
-
     public static void main(String[] args) {
         /* TEST EVALUATE
         // Player 3 wins by reaching the other side
@@ -52,6 +40,7 @@ class Client {
         BOARD[2][2] = 2;
         System.out.println("No winner: " + (log320.Client.evaluate(3) == 0)); // True
 */
+        Game game = null;
 
         try {
             Socket client = new Socket("localhost", 8888);
@@ -67,27 +56,22 @@ class Client {
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
-                    board = new Board(new String(aBuffer).trim(), 3);
-                    cpuPlayer = new CPUPlayer(board, 3);
+                    game = new Game(new String(aBuffer).trim(), Player.RED);
 
-                    System.out.println("Nouvelle partie! Vous jouer rouge");
+                    System.out.println("Nouvelle partie! Vous jouez rouge");
 
-                    ArrayList<String> moves = cpuPlayer.getNextMove();
-                    String move = moves.get(RANDOM.nextInt(moves.size()));
-                    board.play(move);
-
+                    String move = game.getNextMove();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
                 }
 
                 // Debut de la partie en joueur Noir
                 if (cmd == '2') {
-                    System.out.println("Nouvelle partie! Vous jouer noir");
+                    System.out.println("Nouvelle partie! Vous jouez noir");
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
-                    board = new Board(new String(aBuffer).trim(), 1);
-                    cpuPlayer = new CPUPlayer(board, 1);
+                    game = new Game(new String(aBuffer).trim(), Player.BLACK);
                 }
 
                 // Le serveur demande le prochain coup
@@ -100,14 +84,12 @@ class Client {
 
                     String s = new String(aBuffer);
                     String m = s.replaceAll("[^A-Za-z0-9]", "");
-                    board.play(m);
+                    game.play(m);
 
                     System.out.println("Dernier coup :" + s);
                     System.out.println("Votre tour");
 
-                    ArrayList<String> moves = cpuPlayer.getNextMove();
-                    String move = moves.get(RANDOM.nextInt(moves.size()));
-                    board.play(move);
+                    String move = game.getNextMove();
 
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
@@ -115,12 +97,10 @@ class Client {
 
                 // Le dernier coup est invalide
                 if (cmd == '4') {
-                    board.print();
-                    System.out.println(board.getLastMove() + " est invalide, entrez un nouveau coup");
+                    game.printBoard();
+                    System.out.println(game.getLastMove() + " est invalide, entrez un nouveau coup");
 
-                    ArrayList<String> moves = cpuPlayer.getNextMove();
-                    String move = moves.get(RANDOM.nextInt(moves.size()));
-                    board.play(move);
+                    String move = game.getNextMove();
 
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();

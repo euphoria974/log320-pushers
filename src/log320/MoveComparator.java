@@ -2,11 +2,13 @@ package log320;
 
 import java.util.Comparator;
 
+import static log320.Const.CHAR_TO_ROW;
+
 public class MoveComparator implements Comparator<String> {
     final int[][] BOARD;
-    final int PLAYER;
+    final Player PLAYER;
 
-    public MoveComparator(Board board, int player) {
+    public MoveComparator(Board board, Player player) {
         this.BOARD = board.getBoard();
         this.PLAYER = player;
     }
@@ -16,30 +18,27 @@ public class MoveComparator implements Comparator<String> {
         return Integer.compare(definePriority(m1), definePriority(m2));
     }
 
-    // Centre
-    // Coins
-    // Le reste
     private int definePriority(String move) { // TODO : à peaufiner
-        int fromRow = move.charAt(0) - 65;
+        int fromRow = move.charAt(0) - CHAR_TO_ROW;
         int fromCol = Character.getNumericValue(move.charAt(1)) - 1;
-        int toRow = move.charAt(2) - 65;
+        int toRow = move.charAt(2) - CHAR_TO_ROW;
         int toCol = Character.getNumericValue(move.charAt(3)) - 1;
         int movedPiece = BOARD[fromRow][fromCol];
         int dest = BOARD[toRow][toCol];
 
         int score = 0;
 
-        if ((PLAYER == 3 && toCol == 7) || (PLAYER == 1 && toCol == 0)) {
+        if (toCol == PLAYER.getWinningCol()) {
             score += 10000;
         }
 
-        score += (PLAYER == 3) ? (toCol - fromCol) * 10 : (fromCol - toCol) * 10;
+        score += (PLAYER == Player.RED) ? (toCol - fromCol) * 10 : (fromCol - toCol) * 10;
 
-        if (((PLAYER == 3 && (dest == 1 || dest == 2)) || (PLAYER == 1 && (dest == 3 || dest == 4)))) {
+        if (dest == PLAYER.getOpponent().getPawn() || dest == PLAYER.getOpponent().getPusher()) {
             score += 500;
         }
 
-        if (movedPiece == PLAYER) {
+        if (movedPiece == PLAYER.getPawn()) {
             score += 30;
         }
 
