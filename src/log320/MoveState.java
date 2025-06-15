@@ -1,3 +1,5 @@
+package log320;
+
 public class MoveState {
     int fromRow, fromCol, toRow, toCol, movedPiece, capturedPiece;
 
