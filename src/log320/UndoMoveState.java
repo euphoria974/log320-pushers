@@ -1,13 +1,11 @@
 package log320;
 
 public class UndoMoveState {
-    int fromRow, fromCol, toRow, toCol, movedPiece, capturedPiece;
+    int movedPiece, capturedPiece;
+    Move move;
 
-    public UndoMoveState update(int fr, int fc, int tr, int tc, int mp, int cp) {
-        fromRow = fr;
-        fromCol = fc;
-        toRow = tr;
-        toCol = tc;
+    public UndoMoveState set(Move m, int mp, int cp) {
+        move = m;
         movedPiece = mp;
         capturedPiece = cp;
         return this;

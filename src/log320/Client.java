@@ -7,40 +7,10 @@ import java.net.Socket;
 
 class Client {
     public static void main(String[] args) {
-        /* TEST EVALUATE
-        // Player 3 wins by reaching the other side
-        resetBoard();
-        BOARD[0][7] = 3;
-        System.out.println("Player 3 wins: " + (log320.Client.evaluate(3) == 100)); // True
-
-        // Player 3 wins if no opponent pusher is found
-        resetBoard();
-        for (int i = 0; i < 8; i++) {
-            BOARD[i][7] = 0;
-        }
-        BOARD[0][7] = 3;
-        System.out.println("Player 3 wins: " + (log320.Client.evaluate(3) == 100)); // True
-
-        // Opponent wins by reaching the other side
-        resetBoard();
-        BOARD[0][0] = 1;
-        System.out.println("Opponent wins: " + (log320.Client.evaluate(3) == -100)); // True
-
-        // Opponent wins if player has no pusher
-        resetBoard();
-        for (int i = 0; i < 8; i++) {
-            BOARD[i][0] = 0;
-        }
-        BOARD[0][7] = 3;
-        System.out.println("Opponent wins: " + (log320.Client.evaluate(3) == 100)); // True
-
-        // No winner
-        resetBoard();
-        BOARD[1][1] = 3;
-        BOARD[2][2] = 2;
-        System.out.println("No winner: " + (log320.Client.evaluate(3) == 0)); // True
-*/
         Game game = null;
+        // TODO PoolFactory.getInstance();
+
+        Const.ALL_MOVES.get("A1A2"); // Initialize the static map of all possible moves
 
         try {
             Socket client = new Socket("localhost", 8888);
@@ -60,7 +30,7 @@ class Client {
 
                     System.out.println("Nouvelle partie! Vous jouez rouge");
 
-                    String move = game.getNextMove();
+                    String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
                 }
@@ -89,8 +59,7 @@ class Client {
                     System.out.println("Dernier coup :" + s);
                     System.out.println("Votre tour");
 
-                    String move = game.getNextMove();
-
+                    String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
                 }
@@ -100,8 +69,7 @@ class Client {
                     game.printBoard();
                     System.out.println(game.getLastMove() + " est invalide, entrez un nouveau coup");
 
-                    String move = game.getNextMove();
-
+                    String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
                 }

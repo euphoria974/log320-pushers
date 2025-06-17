@@ -11,13 +11,12 @@ public class Board {
     private final MoveComparator MOVE_COMPARATOR_RED, MOVE_COMPARATOR_BLACK;
     private final int[][] BOARD = new int[8][8];
     private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
-    private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>();
+    private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>(1000);
 
-    private String lastMove = "";
+    private Move lastMove = null;
     private int moveStatePoolIndex = 0;
 
-    public Board(String s, Player player) {
-        build(s);
+    public Board() {
         MOVE_COMPARATOR_RED = new MoveComparator(this, Player.RED);
         MOVE_COMPARATOR_BLACK = new MoveComparator(this, Player.BLACK);
 
@@ -26,11 +25,16 @@ public class Board {
         }
     }
 
+    public Board(String s) {
+        this();
+        build(s);
+    }
+
     public int[][] getBoard() {
         return BOARD;
     }
 
-    public String getLastMove() {
+    public Move getLastMove() {
         return lastMove;
     }
 
@@ -69,34 +73,38 @@ public class Board {
         }
     }
 
+    public void clear() {
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                BOARD[i][j] = EMPTY;
+            }
+        }
+    }
+
     public void print() {
         for (int[] ints : BOARD) {
             System.out.println(Arrays.toString(ints).replaceAll("[\\[\\],]", "").replaceAll(",", " "));
         }
     }
 
-    public void play(String move) {
+    public void play(Move move) {
         lastMove = move;
 
-        int fromRow = move.charAt(0) - CHAR_TO_ROW;
-        int fromCol = Character.getNumericValue(move.charAt(1)) - 1;
-        int toRow = move.charAt(2) - CHAR_TO_ROW;
-        int toCol = Character.getNumericValue(move.charAt(3)) - 1;
-        int movedPiece = BOARD[fromRow][fromCol];
-        int capturedPiece = BOARD[toRow][toCol];
+        int movedPiece = BOARD[move.getFromRow()][move.getFromCol()];
+        int capturedPiece = BOARD[move.getToRow()][move.getToCol()];
 
         UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
-        MOVE_STACK.push(ms.update(fromRow, fromCol, toRow, toCol, movedPiece, capturedPiece));
+        MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece));
 
-        BOARD[fromRow][fromCol] = EMPTY;
-        BOARD[toRow][toCol] = movedPiece;
+        BOARD[move.getFromRow()][move.getFromCol()] = EMPTY;
+        BOARD[move.getToRow()][move.getToCol()] = movedPiece;
     }
 
     public void undo() {
         if (MOVE_STACK.isEmpty()) return;
         UndoMoveState ms = MOVE_STACK.pop();
-        BOARD[ms.toRow][ms.toCol] = ms.capturedPiece;
-        BOARD[ms.fromRow][ms.fromCol] = ms.movedPiece;
+        BOARD[ms.move.getToRow()][ms.move.getToCol()] = ms.capturedPiece;
+        BOARD[ms.move.getFromRow()][ms.move.getFromCol()] = ms.movedPiece;
         moveStatePoolIndex--;
     }
 
@@ -158,8 +166,8 @@ public class Board {
 
         score += (playerPushers * 300 + playerPawns * 100) - (opponentPushers * 300 + opponentPawns * 100);
 
-        List<String> myMoves = getPossibleMoves(player);
-        List<String> oppMoves = getPossibleMoves(player.getOpponent());
+        List<Move> myMoves = getPossibleMoves(player);
+        List<Move> oppMoves = getPossibleMoves(player.getOpponent());
         score += (myMoves.size() - oppMoves.size()) * 10;
 
         score += 20 * countPotentialPushes(player);
@@ -203,8 +211,8 @@ public class Board {
         return count;
     }
 
-    public ArrayList<String> getPossibleMoves(Player player) {
-        ArrayList<String> possibleMoves = new ArrayList<>(32);
+    public List<Move> getPossibleMoves(Player player) {
+        List<Move> possibleMoves = new ArrayList<>(32);
         StringBuilder sb = new StringBuilder(4);
 
         for (int row = 0; row < 8; row++) {
@@ -213,37 +221,37 @@ public class Board {
                     if (BOARD[row][col + player.getForwardColumn()] == EMPTY && BOARD[row][col - player.getForwardColumn()] == player.getPusher()) {
                         sb.setLength(0);
                         sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 1 + player.getForwardColumn());
-                        possibleMoves.add(sb.toString());
+                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
                     }
 
                     if (row > 0 && row < 7 && BOARD[row + 1][col - player.getForwardColumn()] == player.getPusher() && ((BOARD[row - 1][col + player.getForwardColumn()] == EMPTY || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPusher()))) {
                         sb.setLength(0);
                         sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 1 + player.getForwardColumn());
-                        possibleMoves.add(sb.toString());
+                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
                     }
 
                     if (row > 0 && row < 7 && BOARD[row - 1][col - player.getForwardColumn()] == player.getPusher() && ((BOARD[row + 1][col + player.getForwardColumn()] == EMPTY || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPusher()))) {
                         sb.setLength(0);
                         sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 1 + player.getForwardColumn());
-                        possibleMoves.add(sb.toString());
+                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
                     }
                 } else if (BOARD[row][col] == player.getPusher()) {
                     if (BOARD[row][col + player.getForwardColumn()] == EMPTY) {
                         sb.setLength(0);
                         sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW)).append(col + 1 + player.getForwardColumn());
-                        possibleMoves.add(sb.toString());
+                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
                     }
 
                     if (row > 0 && (BOARD[row - 1][col + player.getForwardColumn()] == EMPTY || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row - 1][col + player.getForwardColumn()] == player.getOpponent().getPusher())) {
                         sb.setLength(0);
                         sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW - 1)).append(col + 1 + player.getForwardColumn());
-                        possibleMoves.add(sb.toString());
+                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
                     }
 
                     if (row < 7 && (BOARD[row + 1][col + player.getForwardColumn()] == EMPTY || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPawn() || BOARD[row + 1][col + player.getForwardColumn()] == player.getOpponent().getPusher())) {
                         sb.setLength(0);
                         sb.append((char) (row + CHAR_TO_ROW)).append(col + 1).append((char) (row + CHAR_TO_ROW + 1)).append(col + 1 + player.getForwardColumn());
-                        possibleMoves.add(sb.toString());
+                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
                     }
                 }
             }
@@ -252,5 +260,13 @@ public class Board {
         // TODO: Sort the possible moves based on heuristics
         // possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
         return possibleMoves;
+    }
+
+    public Board clone() {
+        Board clone = new Board();
+        for (int i = 0; i < 8; i++) {
+            System.arraycopy(this.BOARD[i], 0, clone.BOARD[i], 0, 8);
+        }
+        return clone;
     }
 }

@@ -2,9 +2,7 @@ package log320;
 
 import java.util.Comparator;
 
-import static log320.Const.CHAR_TO_ROW;
-
-public class MoveComparator implements Comparator<String> {
+public class MoveComparator implements Comparator<Move> {
     final int[][] BOARD;
     final Player PLAYER;
 
@@ -14,49 +12,45 @@ public class MoveComparator implements Comparator<String> {
     }
 
     @Override
-    public int compare(String m1, String m2) {
+    public int compare(Move m1, Move m2) {
         return Integer.compare(definePriority(m1), definePriority(m2));
     }
 
-    private int definePriority(String move) { // TODO : à peaufiner
-        int fromRow = move.charAt(0) - CHAR_TO_ROW;
-        int fromCol = Character.getNumericValue(move.charAt(1)) - 1;
-        int toRow = move.charAt(2) - CHAR_TO_ROW;
-        int toCol = Character.getNumericValue(move.charAt(3)) - 1;
-        int movedPiece = BOARD[fromRow][fromCol];
-        int dest = BOARD[toRow][toCol];
+    private int definePriority(Move move) { // TODO : à peaufiner
+        int movedPiece = BOARD[move.getFromRow()][move.getFromCol()];
+        int dest = BOARD[move.getToRow()][move.getToCol()];
 
         int score = 0;
 
         // Près de la victoire
-        if (toCol == PLAYER.getWinningCol()) score += 10000;
-        else if (toCol == PLAYER.getWinningCol() - PLAYER.getForwardColumn()) score += 800;
-        else if (toCol == PLAYER.getWinningCol() - 2 * PLAYER.getForwardColumn()) score += 500;
+        if (move.getToCol() == PLAYER.getWinningCol()) score += 10000;
+        else if (move.getToCol() == PLAYER.getWinningCol() - PLAYER.getForwardColumn()) score += 800;
+        else if (move.getToCol() == PLAYER.getWinningCol() - 2 * PLAYER.getForwardColumn()) score += 500;
 
         // Capture
         if (dest == PLAYER.getOpponent().getPusher()) score += 1000;
         else if (dest == PLAYER.getOpponent().getPawn()) score += 200;
 
         // Se met devant un pusher
-        int forwardCol = toCol + PLAYER.getForwardColumn();
-        if (forwardCol < 8 && forwardCol > 0 && BOARD[toRow][forwardCol] == PLAYER.getOpponent().getPusher()) {
+        int forwardCol = move.getToCol() + PLAYER.getForwardColumn();
+        if (forwardCol < 8 && forwardCol > 0 && BOARD[move.getToRow()][forwardCol] == PLAYER.getOpponent().getPusher()) {
             score += 500;
         }
 
         // Contrôle le centre
-        if (toRow >= 2 && toRow <= 5) score += 100;
+        if (move.getToRow() >= 2 && move.getToRow() <= 5) score += 100;
 
         // Petit jouable
         if (movedPiece == PLAYER.getPawn()) {
             score += 30;
-            int backCol = fromCol - PLAYER.getForwardColumn();
-            if (backCol >= 0 && backCol < 8 && BOARD[fromRow][backCol] == PLAYER.getPusher()) {
+            int backCol = move.getFromCol() - PLAYER.getForwardColumn();
+            if (backCol >= 0 && backCol < 8 && BOARD[move.getFromRow()][backCol] == PLAYER.getPusher()) {
                 score += 50;
             }
         }
 
         // Safe après le coup
-        if (isExposedAfterMove(toRow, toCol)) {
+        if (isExposedAfterMove(move.getToRow(), move.getToCol())) {
             score -= 300;
         } else {
             score += 200;
