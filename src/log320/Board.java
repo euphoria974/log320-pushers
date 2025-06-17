@@ -108,11 +108,7 @@ public class Board {
         moveStatePoolIndex--;
     }
 
-    public boolean hasWon(Player player) {
-        return evaluate(player) == WIN_SCORE;
-    }
-
-    public int evaluate(Player player) {
+    public int evaluate(Player player, int depth) {
         // TODO: retirer des points si des pions sont exposés
         int score = 0;
 
@@ -121,9 +117,9 @@ public class Board {
 
         for (int row = 0; row < 8; row++) {
             if (BOARD[row][player.getWinningCol()] == player.getPawn() || BOARD[row][player.getWinningCol()] == player.getPusher())
-                return WIN_SCORE;
+                return WIN_SCORE - depth;
             if (BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPawn() || BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPusher())
-                return LOSS_SCORE;
+                return LOSS_SCORE + depth;
         }
 
         for (int row = 0; row < 8; row++) {
@@ -180,12 +176,7 @@ public class Board {
 
         for (int row = 0; row < 8; row++) {
             for (int col = player == Player.RED ? 0 : 1; col < (player == Player.RED ? 7 : 8); col++) {
-                boolean isPusher = false;
                 if (BOARD[row][col] == player.getPusher()) {
-                    isPusher = true;
-                }
-
-                if (isPusher) {
                     int piece = BOARD[row][col + player.getForwardColumn()];
                     if (piece == player.getPawn()) {
                         count++;
@@ -257,8 +248,7 @@ public class Board {
             }
         }
 
-        // TODO: Sort the possible moves based on heuristics
-        // possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
+        possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
         return possibleMoves;
     }
 

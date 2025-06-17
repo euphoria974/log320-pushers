@@ -16,20 +16,18 @@ public class MoveComparator implements Comparator<Move> {
         return Integer.compare(definePriority(m1), definePriority(m2));
     }
 
-    private int definePriority(Move move) { // TODO : à peaufiner
+    private int definePriority(Move move) {
         int movedPiece = BOARD[move.getFromRow()][move.getFromCol()];
-        int dest = BOARD[move.getToRow()][move.getToCol()];
+        int destPiece = BOARD[move.getToRow()][move.getToCol()];
 
         int score = 0;
 
         // Près de la victoire
-        if (move.getToCol() == PLAYER.getWinningCol()) score += 10000;
-        else if (move.getToCol() == PLAYER.getWinningCol() - PLAYER.getForwardColumn()) score += 800;
-        else if (move.getToCol() == PLAYER.getWinningCol() - 2 * PLAYER.getForwardColumn()) score += 500;
+        score += 120 * (7 - Math.abs(move.getToCol() - PLAYER.getWinningCol()));
 
         // Capture
-        if (dest == PLAYER.getOpponent().getPusher()) score += 1000;
-        else if (dest == PLAYER.getOpponent().getPawn()) score += 200;
+        if (destPiece == PLAYER.getOpponent().getPusher()) score += 1000;
+        else if (destPiece == PLAYER.getOpponent().getPawn()) score += 200;
 
         // Se met devant un pusher
         int forwardCol = move.getToCol() + PLAYER.getForwardColumn();
