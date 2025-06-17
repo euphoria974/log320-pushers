@@ -6,8 +6,7 @@ import java.util.Random;
 
 public final class Const {
     // Heuristiques
-    static final int MAX_DEPTH = 6;
-    static final long MAX_TIME_MILLIS = 4900;
+    static final long MAX_TIME_MILLIS = 4940;
     static final int MAX_TIME_SCORE = -100;
 
     static final int WIN_SCORE = 10000;
@@ -27,7 +26,6 @@ public final class Const {
     static final int BLACK_WINNING_COL = 0;
 
     static {
-        Board board = new Board();
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 for (int dir = -1; dir <= 1; dir++) {

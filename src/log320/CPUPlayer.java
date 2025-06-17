@@ -25,37 +25,53 @@ public class CPUPlayer {
     public ArrayList<Move> getNextMove() {
         long startTime = System.currentTimeMillis();
         BEST_MOVES.clear();
-        final int[] depth = new int[]{0};
-
-        // TODO: move new
+        int maxDepth = 1;
 
         while (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
             CURRENT_BEST_MOVES.clear();
             int bestScore = Integer.MIN_VALUE;
-
             List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
             ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             List<Future<int[]>> futures = new ArrayList<>();
 
-            for (Move move : possibleMoves) {
+            for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
+                Move move = possibleMoves.get(moveIndex);
                 Board boardCopy = BOARD.clone();
                 boardCopy.play(move);
 
-                int moveIndex = possibleMoves.indexOf(move);
+                final int idx = moveIndex;
+                int finalMaxDepth = maxDepth;
                 futures.add(executor.submit(() -> {
-                    int score = alphaBeta(PLAYER.getOpponent(), boardCopy, false, Integer.MIN_VALUE, Integer.MAX_VALUE, depth[0], startTime);
-                    return new int[]{score, moveIndex};
+                    int score = alphaBeta(
+                            PLAYER.getOpponent(), // Start with opponent, but see note below
+                            boardCopy,
+                            false,                // Start as minimizing
+                            Integer.MIN_VALUE,
+                            Integer.MAX_VALUE,
+                            1,                    // currentDepth
+                            finalMaxDepth,
+                            startTime
+                    );
+                    return new int[]{score, idx};
                 }));
             }
 
             executor.shutdown();
 
+            boolean completed = true;
             for (Future<int[]> future : futures) {
                 try {
                     int[] result = future.get();
                     int score = result[0];
                     int moveIndex = result[1];
                     Move move = possibleMoves.get(moveIndex);
+
+                    System.out.println("Move: " + move + ", Score: " + score + ", Depth: " + maxDepth);
+
+                    if (score == MAX_TIME_SCORE) {
+                        completed = false;
+                        break;
+                    }
 
                     if (score > bestScore) {
                         bestScore = score;
@@ -65,21 +81,22 @@ public class CPUPlayer {
                         CURRENT_BEST_MOVES.add(move);
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    completed = false;
+                    break;
                 }
             }
 
-            if (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
+            if (completed && !CURRENT_BEST_MOVES.isEmpty()) {
                 BEST_MOVES.clear();
                 BEST_MOVES.addAll(CURRENT_BEST_MOVES);
+            } else {
+                break;
             }
 
-            depth[0]++;
+            maxDepth++;
         }
 
-        // Si aucun coup n'a été trouvé, on choisit un coup aléatoire
         if (BEST_MOVES.isEmpty()) {
-            System.out.println("Aucun coup trouvé, choix aléatoire!!!!");
             List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
             BEST_MOVES.add(possibleMoves.get(RANDOM.nextInt(possibleMoves.size())));
         }
@@ -87,74 +104,47 @@ public class CPUPlayer {
         return BEST_MOVES;
     }
 
-    private int alphaBeta(Player player, Board board, boolean isMax, int alpha, int beta, int dept, long startTime) {
+    private int alphaBeta(Player player, Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
         if (System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS) {
             return MAX_TIME_SCORE;
         }
 
         List<Move> possibleMoves = board.getPossibleMoves(player);
-
         int score = board.evaluate(PLAYER);
 
-        if (score == WIN_SCORE || score == LOSS_SCORE || possibleMoves.isEmpty() || dept >= MAX_DEPTH) {
+        if (score == WIN_SCORE || score == LOSS_SCORE || possibleMoves.isEmpty() || currentDepth >= maxDepth) {
             return score;
         }
 
         if (isMax) {
             int maxScore = Integer.MIN_VALUE;
-
             for (Move move : possibleMoves) {
                 if (System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS) {
                     return MAX_TIME_SCORE;
                 }
-
                 board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, false, alpha, beta, dept + 1, startTime);
+                int value = alphaBeta(player.getOpponent(), board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
-
-                // Optimisation: early cutoff
-                // TODO voir si cette optimisation est pertinente
-                /*if (value == WIN_SCORE) {
-                    return value;
-                }*/
-
+                if (value == MAX_TIME_SCORE) return MAX_TIME_SCORE;
                 maxScore = Math.max(maxScore, value);
-
-                if (maxScore >= beta) {
-                    break;
-                }
-
+                if (maxScore >= beta) break;
                 alpha = Math.max(alpha, maxScore);
             }
-
             return maxScore;
         } else {
             int minScore = Integer.MAX_VALUE;
-
             for (Move move : possibleMoves) {
                 if (System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS) {
                     return MAX_TIME_SCORE;
                 }
-
                 board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, true, alpha, beta, dept + 1, startTime);
+                int value = alphaBeta(player.getOpponent(), board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
-
-                // Optimisation: early cutoff
-                // TODO voir si cette optimisation est pertinente
-                /*if (value == LOSS_SCORE) {
-                    return value;
-                }*/
-
+                if (value == MAX_TIME_SCORE) return MAX_TIME_SCORE;
                 minScore = Math.min(minScore, value);
-
-                if (minScore <= alpha) {
-                    break;
-                }
-
+                if (minScore <= alpha) break;
                 beta = Math.min(beta, minScore);
             }
-
             return minScore;
         }
     }

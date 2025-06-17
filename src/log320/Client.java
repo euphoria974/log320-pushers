@@ -5,12 +5,12 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+import static log320.Const.ALL_MOVES;
+
 class Client {
     public static void main(String[] args) {
         Game game = null;
-        // TODO PoolFactory.getInstance();
-
-        Const.ALL_MOVES.get("A1A2"); // Initialize the static map of all possible moves
+        ALL_MOVES.get("A1A2"); // Initialize the static map of all possible moves
 
         try {
             Socket client = new Socket("localhost", 8888);

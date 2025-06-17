@@ -132,8 +132,8 @@ public class Board {
                     playerPushers++;
                     score += player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
 
-                    if (col == player.getWinningCol()) {
-                        score += 500;
+                    if (col == player.getWinningCol() - 1) {
+                        score += 5000;
                     }
                 } else if (BOARD[row][col] == player.getOpponent().getPusher()) {
                     opponentPushers++;
@@ -142,8 +142,8 @@ public class Board {
                     playerPawns++;
                     score += player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
 
-                    if (col == player.getWinningCol()) {
-                        score += 500;
+                    if (col == player.getWinningCol() - 1) {
+                        score += 5000;
                     }
                 } else if (BOARD[row][col] == player.getOpponent().getPawn()) {
                     opponentPawns++;
@@ -211,8 +211,8 @@ public class Board {
         return count;
     }
 
-    public List<Move> getPossibleMoves(Player player) {
-        List<Move> possibleMoves = new ArrayList<>(32);
+    public ArrayList<Move> getPossibleMoves(Player player) {
+        ArrayList<Move> possibleMoves = new ArrayList<>(32);
         StringBuilder sb = new StringBuilder(4);
 
         for (int row = 0; row < 8; row++) {
