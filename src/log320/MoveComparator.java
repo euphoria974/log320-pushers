@@ -15,14 +15,22 @@ public class MoveComparator implements Comparator<Move> {
 
     @Override
     public int compare(Move m1, Move m2) {
-        return Integer.compare(definePriority(m1), definePriority(m2));
+        return Integer.compare(getMoveScore(m2), getMoveScore(m1));
     }
 
-    private int definePriority(Move move) {
+    public int getMoveScore(Move move) {
         int movedPiece = BOARD[move.getFromRow()][move.getFromCol()];
         int destPiece = BOARD[move.getToRow()][move.getToCol()];
 
         int score = 0;
+
+        if (move.getToCol() == PLAYER.getWinningCol()) {
+            if (movedPiece == PLAYER.getPusher()) {
+                return Integer.MAX_VALUE;
+            } else if (isPawnActive(move)) {
+                return Integer.MAX_VALUE;
+            }
+        }
 
         // Si tu peux manger un pusher adverse +20
         // Si tu peux manger un pion adverse +8
@@ -39,7 +47,7 @@ public class MoveComparator implements Comparator<Move> {
         } else if (destPiece == PLAYER.getOpponent().getPawn()) {
             if (movedPiece == PLAYER.getPusher()) {
                 score += 8;
-            } else if (BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher()) {
+            } else if (isPawnActive(move)) {
                 score += 8;
             }
         }
@@ -53,5 +61,9 @@ public class MoveComparator implements Comparator<Move> {
         score += 6 * Math.abs(move.getToCol() - PLAYER.getWinningCol());
 
         return score;
+    }
+
+    private boolean isPawnActive(Move move) {
+        return BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher();
     }
 }

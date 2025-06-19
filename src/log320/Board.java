@@ -104,6 +104,10 @@ public class Board {
         BOARD[move.getToRow()][move.getToCol()] = movedPiece;
     }
 
+    public void place(int row, int col, int piece) {
+        BOARD[row][col] = piece;
+    }
+
     public void undo() {
         if (MOVE_STACK.isEmpty()) return;
         UndoMoveState ms = MOVE_STACK.pop();
