@@ -25,15 +25,25 @@ public class CPUPlayer {
     public ArrayList<Move> getNextMove() {
         long startTime = System.currentTimeMillis();
         BEST_MOVES.clear();
-        int maxDepth = 1;
+        int maxDepth = FIRST_MAX_DEPTH;
+        int bestScore;
+        List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
+        ExecutorService executor;
+        List<Future<int[]>> futures;
+
+        System.out.println("Possible moves: " + possibleMoves);
+        Move winningMove = possibleMoves.stream().findAny().filter(Move::isWinning).orElse(null);
+        if (winningMove != null) {
+            BEST_MOVES.add(winningMove);
+            return BEST_MOVES;
+        }
 
         while (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
             CURRENT_BEST_MOVES.clear();
-            int bestScore = Integer.MIN_VALUE;
-            List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
-            System.out.println("Possible moves: " + possibleMoves);
-            ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            List<Future<int[]>> futures = new ArrayList<>();
+            bestScore = Integer.MIN_VALUE;
+            possibleMoves = BOARD.getPossibleMoves(PLAYER);
+            executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            futures = new ArrayList<>();
 
             for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
                 Move move = possibleMoves.get(moveIndex);
@@ -98,7 +108,6 @@ public class CPUPlayer {
         }
 
         if (BEST_MOVES.isEmpty()) {
-            List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
             BEST_MOVES.add(possibleMoves.get(RANDOM.nextInt(possibleMoves.size())));
         }
 
@@ -111,7 +120,7 @@ public class CPUPlayer {
         }
 
         List<Move> possibleMoves = board.getPossibleMoves(player);
-        int score = board.evaluate(PLAYER, currentDepth);
+        int score = board.evaluate(PLAYER);
 
         if (score >= WIN_SCORE || score <= LOSS_SCORE || possibleMoves.isEmpty() || currentDepth >= maxDepth) {
             return score;

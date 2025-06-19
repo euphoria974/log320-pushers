@@ -108,7 +108,7 @@ public class Board {
         moveStatePoolIndex--;
     }
 
-    public int evaluate(Player player, int depth) {
+    public int evaluate(Player player) {
         // TODO: retirer des points si des pions sont exposés
         int score = 0;
 
@@ -117,33 +117,34 @@ public class Board {
 
         for (int row = 0; row < 8; row++) {
             if (BOARD[row][player.getWinningCol()] == player.getPawn() || BOARD[row][player.getWinningCol()] == player.getPusher())
-                return WIN_SCORE - depth;
+                return WIN_SCORE;
             if (BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPawn() || BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPusher())
-                return LOSS_SCORE + depth;
+                return LOSS_SCORE;
         }
 
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
+                int bonusScore = player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
                 if (BOARD[row][col] == player.getPusher()) {
                     playerPushers++;
-                    score += player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+                    score += bonusScore;
 
                     if (col == player.getWinningCol() - 1) {
                         score += 5000;
                     }
                 } else if (BOARD[row][col] == player.getOpponent().getPusher()) {
                     opponentPushers++;
-                    score -= player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+                    score -= bonusScore;
                 } else if (BOARD[row][col] == player.getPawn()) {
                     playerPawns++;
-                    score += player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+                    score += bonusScore;
 
                     if (col == player.getWinningCol() - 1) {
                         score += 5000;
                     }
                 } else if (BOARD[row][col] == player.getOpponent().getPawn()) {
                     opponentPawns++;
-                    score -= player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
+                    score -= bonusScore;
                 }
 
                 if ((BOARD[row][col] == player.getPawn() || BOARD[row][col] == player.getPusher()) && row >= 2 && row <= 5) {

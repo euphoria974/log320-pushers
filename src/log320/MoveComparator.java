@@ -26,17 +26,8 @@ public class MoveComparator implements Comparator<Move> {
         score += 120 * (7 - Math.abs(move.getToCol() - PLAYER.getWinningCol()));
 
         // Capture
-        if (destPiece == PLAYER.getOpponent().getPusher()) score += 1000;
-        else if (destPiece == PLAYER.getOpponent().getPawn()) score += 200;
-
-        // Se met devant un pusher
-        int forwardCol = move.getToCol() + PLAYER.getForwardColumn();
-        if (forwardCol < 8 && forwardCol > 0 && BOARD[move.getToRow()][forwardCol] == PLAYER.getOpponent().getPusher()) {
-            score += 500;
-        }
-
-        // Contrôle le centre
-        if (move.getToRow() >= 2 && move.getToRow() <= 5) score += 100;
+        if (destPiece == PLAYER.getOpponent().getPusher()) score += 100;
+        else if (destPiece == PLAYER.getOpponent().getPawn()) score += 25;
 
         // Petit jouable
         if (movedPiece == PLAYER.getPawn()) {
@@ -49,24 +40,9 @@ public class MoveComparator implements Comparator<Move> {
 
         // Safe après le coup
         if (isExposedAfterMove(move.getToRow(), move.getToCol())) {
-            score -= 300;
+            score -= 95;
         } else {
-            score += 200;
-        }
-
-        int playerPawnCount = 0;
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                if (BOARD[r][c] == PLAYER.getPawn()) playerPawnCount++;
-            }
-        }
-
-        if (movedPiece == PLAYER.getPawn() && playerPawnCount > 4) {
-            score += 300;
-        }
-
-        if (movedPiece == PLAYER.getPusher() && playerPawnCount > 4) {
-            score -= 300;
+            score += 50;
         }
 
         return score;

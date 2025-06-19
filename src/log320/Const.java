@@ -7,10 +7,11 @@ import java.util.Random;
 public final class Const {
     // Heuristiques
     static final long MAX_TIME_MILLIS = 4940;
+    static final int FIRST_MAX_DEPTH = 5;
     static final int MAX_TIME_SCORE = -100;
 
-    static final int WIN_SCORE = 10000;
-    static final int LOSS_SCORE = -10000;
+    static final int WIN_SCORE = 100000;
+    static final int LOSS_SCORE = -100000;
     static final Random RANDOM = new Random();
     static final int CHAR_TO_ROW = 65;
     static final Map<String, Move> ALL_MOVES = new HashMap<>(308);
@@ -21,11 +22,11 @@ public final class Const {
     static final int BLACK_PUSHER = 2;
     static final int RED_PAWN = 3;
     static final int RED_PUSHER = 4;
-
     static final int RED_WINNING_COL = 7;
     static final int BLACK_WINNING_COL = 0;
 
     static {
+        // Mouvements pour rouge
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 for (int dir = -1; dir <= 1; dir++) {
@@ -39,6 +40,7 @@ public final class Const {
             }
         }
 
+        // Mouvements pour noir
         for (int row = 7; row >= 0; row--) {
             for (int col = 7; col > 0; col--) {
                 for (int dir = -1; dir <= 1; dir++) {
