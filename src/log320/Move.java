@@ -14,7 +14,7 @@ public class Move {
         this.FROM_COL = fromCol;
         this.TO_COL = toCol;
         this.STRING_MOVE = "" + ((char) (fromRow + CHAR_TO_ROW)) + (fromCol + 1) + ((char) (toRow + CHAR_TO_ROW)) + (toCol + 1);
-        this.IS_WINNING = toCol == BLACK_WINNING_COL || toCol == Player.RED.getWinningCol();
+        this.IS_WINNING = toCol + 1 == BLACK_WINNING_COL || toCol + 1 == Player.RED.getWinningCol();
     }
 
     public int getFromRow() {

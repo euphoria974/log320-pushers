@@ -2,6 +2,8 @@ package log320;
 
 import java.util.Comparator;
 
+import static log320.Helper.isExposed;
+
 public class MoveComparator implements Comparator<Move> {
     final int[][] BOARD;
     final Player PLAYER;
@@ -39,52 +41,12 @@ public class MoveComparator implements Comparator<Move> {
         }
 
         // Safe après le coup
-        if (isExposedAfterMove(move.getToRow(), move.getToCol())) {
+        if (isExposed(BOARD, PLAYER, move.getToRow(), move.getToCol())) {
             score -= 95;
         } else {
             score += 50;
         }
 
         return score;
-    }
-
-    private boolean isExposedAfterMove(int toRow, int toCol) {
-        int opponentForward = PLAYER.getOpponent().getForwardColumn();
-        int playerForward = PLAYER.getForwardColumn();
-
-        int[][] threatDiagonals = {
-                {-1, opponentForward},
-                {1, opponentForward}
-        };
-        boolean threatened = false;
-        for (int[] dir : threatDiagonals) {
-            int row = toRow + dir[0];
-            int col = toCol + dir[1];
-            if (row >= 0 && row < 8 && col >= 0 && col < 8) {
-                if (BOARD[row][col] == PLAYER.getOpponent().getPusher()) {
-                    threatened = true;
-                    break;
-                }
-            }
-        }
-
-        int[][] protectDiagonals = {
-                {-1, -playerForward},
-                {1, -playerForward}
-        };
-        boolean protectedByPusher = false;
-
-        for (int[] dir : protectDiagonals) {
-            int row = toRow + dir[0];
-            int col = toCol + dir[1];
-            if (row >= 0 && row < 8 && col >= 0 && col < 8) {
-                if (BOARD[row][col] == PLAYER.getPusher()) {
-                    protectedByPusher = true;
-                    break;
-                }
-            }
-        }
-
-        return threatened && !protectedByPusher;
     }
 }

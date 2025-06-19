@@ -1,5 +1,8 @@
 package log320;
 
+import log320.evaluators.DefenseEvaluator;
+import log320.evaluators.IEvaluator;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +15,7 @@ public class Board {
     private final int[][] BOARD = new int[8][8];
     private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
     private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>(1000);
+    private final IEvaluator EVALUATOR = new DefenseEvaluator();
 
     private Move lastMove = null;
     private int moveStatePoolIndex = 0;
@@ -109,98 +113,7 @@ public class Board {
     }
 
     public int evaluate(Player player) {
-        // TODO: retirer des points si des pions sont exposés
-        int score = 0;
-
-        int playerPushers = 0, playerPawns = 0;
-        int opponentPushers = 0, opponentPawns = 0;
-
-        for (int row = 0; row < 8; row++) {
-            if (BOARD[row][player.getWinningCol()] == player.getPawn() || BOARD[row][player.getWinningCol()] == player.getPusher())
-                return WIN_SCORE;
-            if (BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPawn() || BOARD[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPusher())
-                return LOSS_SCORE;
-        }
-
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                int bonusScore = player == Player.RED ? (col * col) / 10 : ((7 - col) * (7 - col)) / 10;
-                if (BOARD[row][col] == player.getPusher()) {
-                    playerPushers++;
-                    score += bonusScore;
-
-                    if (col == player.getWinningCol() - 1) {
-                        score += 5000;
-                    }
-                } else if (BOARD[row][col] == player.getOpponent().getPusher()) {
-                    opponentPushers++;
-                    score -= bonusScore;
-                } else if (BOARD[row][col] == player.getPawn()) {
-                    playerPawns++;
-                    score += bonusScore;
-
-                    if (col == player.getWinningCol() - 1) {
-                        score += 5000;
-                    }
-                } else if (BOARD[row][col] == player.getOpponent().getPawn()) {
-                    opponentPawns++;
-                    score -= bonusScore;
-                }
-
-                if ((BOARD[row][col] == player.getPawn() || BOARD[row][col] == player.getPusher()) && row >= 2 && row <= 5) {
-                    score += 15;
-                }
-            }
-        }
-
-        if (opponentPushers == 0) {
-            return WIN_SCORE;
-        }
-
-        if (playerPushers == 0) {
-            return LOSS_SCORE;
-        }
-
-        score += (playerPushers * 300 + playerPawns * 100) - (opponentPushers * 300 + opponentPawns * 100);
-
-        List<Move> myMoves = getPossibleMoves(player);
-        List<Move> oppMoves = getPossibleMoves(player.getOpponent());
-        score += (myMoves.size() - oppMoves.size()) * 10;
-
-        score += 20 * countPotentialPushes(player);
-
-        return score;
-    }
-
-    private int countPotentialPushes(Player player) {
-        int count = 0;
-
-        for (int row = 0; row < 8; row++) {
-            for (int col = player == Player.RED ? 0 : 1; col < (player == Player.RED ? 7 : 8); col++) {
-                if (BOARD[row][col] == player.getPusher()) {
-                    int piece = BOARD[row][col + player.getForwardColumn()];
-                    if (piece == player.getPawn()) {
-                        count++;
-                    }
-
-                    if (row > 0) {
-                        piece = BOARD[row - 1][col + player.getForwardColumn()];
-                        if (piece == player.getPawn()) {
-                            count++;
-                        }
-                    }
-
-                    if (row < 7) {
-                        piece = BOARD[row + 1][col + player.getForwardColumn()];
-                        if (piece == player.getPawn()) {
-                            count++;
-                        }
-                    }
-                }
-            }
-        }
-
-        return count;
+        return EVALUATOR.evaluate(this, player);
     }
 
     public ArrayList<Move> getPossibleMoves(Player player) {

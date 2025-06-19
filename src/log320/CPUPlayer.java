@@ -31,8 +31,8 @@ public class CPUPlayer {
         ExecutorService executor;
         List<Future<int[]>> futures;
 
-        System.out.println("Possible moves: " + possibleMoves);
-        Move winningMove = possibleMoves.stream().findAny().filter(Move::isWinning).orElse(null);
+        Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
+        System.out.println("Winning move: " + winningMove);
         if (winningMove != null) {
             BEST_MOVES.add(winningMove);
             return BEST_MOVES;
