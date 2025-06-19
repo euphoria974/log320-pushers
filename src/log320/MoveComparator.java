@@ -24,28 +24,33 @@ public class MoveComparator implements Comparator<Move> {
 
         int score = 0;
 
-        // Près de la victoire
-        score += 120 * (7 - Math.abs(move.getToCol() - PLAYER.getWinningCol()));
+        // Si tu peux manger un pusher adverse +20
+        // Si tu peux manger un pion adverse +8
+        // Si t'es pas safe après le coup -95
+        // Si t'es proche de la victoire +6/colonne
 
         // Capture
-        if (destPiece == PLAYER.getOpponent().getPusher()) score += 100;
-        else if (destPiece == PLAYER.getOpponent().getPawn()) score += 25;
-
-        // Petit jouable
-        if (movedPiece == PLAYER.getPawn()) {
-            score += 30;
-            int backCol = move.getFromCol() - PLAYER.getForwardColumn();
-            if (backCol >= 0 && backCol < 8 && BOARD[move.getFromRow()][backCol] == PLAYER.getPusher()) {
-                score += 50;
+        if (destPiece == PLAYER.getOpponent().getPusher()) {
+            if (movedPiece == PLAYER.getPusher()) {
+                score += 20;
+            } else if (BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher()) {
+                score += 20;
+            }
+        } else if (destPiece == PLAYER.getOpponent().getPawn()) {
+            if (movedPiece == PLAYER.getPusher()) {
+                score += 8;
+            } else if (BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher()) {
+                score += 8;
             }
         }
 
-        // Safe après le coup
+        // Exposé
         if (isExposed(BOARD, PLAYER, move.getToRow(), move.getToCol())) {
             score -= 95;
-        } else {
-            score += 50;
         }
+
+        // Près de la victoire
+        score += 6 * Math.abs(move.getToCol() - PLAYER.getWinningCol());
 
         return score;
     }

@@ -32,7 +32,6 @@ public class CPUPlayer {
         List<Future<int[]>> futures;
 
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
-        System.out.println("Winning move: " + winningMove);
         if (winningMove != null) {
             BEST_MOVES.add(winningMove);
             return BEST_MOVES;
@@ -142,11 +141,6 @@ public class CPUPlayer {
                     return MAX_TIME_SCORE;
                 }
 
-                // Optimisation: early cutoff
-                if (value >= WIN_SCORE) {
-                    return value;
-                }
-
                 maxScore = Math.max(maxScore, value);
 
                 if (maxScore >= beta) {
@@ -171,11 +165,6 @@ public class CPUPlayer {
 
                 if (value == MAX_TIME_SCORE) {
                     return MAX_TIME_SCORE;
-                }
-
-                // Optimisation: early cutoff
-                if (value <= LOSS_SCORE) {
-                    return value;
                 }
 
                 minScore = Math.min(minScore, value);
