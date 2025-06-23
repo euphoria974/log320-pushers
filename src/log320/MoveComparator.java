@@ -2,14 +2,12 @@ package log320;
 
 import java.util.Comparator;
 
-import static log320.Helper.isExposed;
-
 public class MoveComparator implements Comparator<Move> {
-    final int[][] BOARD;
-    final Player PLAYER;
+    private final Board BOARD;
+    private final Player PLAYER;
 
     public MoveComparator(Board board, Player player) {
-        this.BOARD = board.getBoard();
+        this.BOARD = board;
         this.PLAYER = player;
     }
 
@@ -19,12 +17,12 @@ public class MoveComparator implements Comparator<Move> {
     }
 
     public int getMoveScore(Move move) {
-        int movedPiece = BOARD[move.getFromRow()][move.getFromCol()];
-        int destPiece = BOARD[move.getToRow()][move.getToCol()];
+        int movedPiece = BOARD.get(move.getFromRow(), move.getFromCol());
+        int destPiece = BOARD.get(move.getToRow(), move.getToCol());
 
         int score = 0;
 
-        if (move.getToCol() == PLAYER.getWinningCol()) {
+        if (move.getToRow() == PLAYER.getWinningRow()) {
             if (movedPiece == PLAYER.getPusher()) {
                 return Integer.MAX_VALUE;
             } else if (isPawnActive(move)) {
@@ -41,7 +39,8 @@ public class MoveComparator implements Comparator<Move> {
         if (destPiece == PLAYER.getOpponent().getPusher()) {
             if (movedPiece == PLAYER.getPusher()) {
                 score += 20;
-            } else if (BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher()) {
+            } else if (BOARD.get(move.getFromRow() - PLAYER.getDirection(), move.getFromCol()
+                    - (move.getToCol() - move.getFromCol())) == PLAYER.getPusher()) {
                 score += 20;
             }
         } else if (destPiece == PLAYER.getOpponent().getPawn()) {
@@ -53,17 +52,18 @@ public class MoveComparator implements Comparator<Move> {
         }
 
         // Exposé
-        if (isExposed(BOARD, PLAYER, move.getToRow(), move.getToCol())) {
+        if (BOARD.isExposed(PLAYER, move.getToRow(), move.getToCol())) {
             score -= 95;
         }
 
         // Près de la victoire
-        score += 6 * Math.abs(move.getToCol() - PLAYER.getWinningCol());
+        score += 6 * Math.abs(move.getToRow() - PLAYER.getWinningRow());
 
         return score;
     }
 
     private boolean isPawnActive(Move move) {
-        return BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher();
+        int direction = move.getToCol() - move.getFromCol();
+        return BOARD.get(move.getFromRow() - PLAYER.getDirection(), move.getFromCol() - direction) == PLAYER.getPusher();
     }
 }

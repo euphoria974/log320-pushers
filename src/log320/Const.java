@@ -13,7 +13,7 @@ public final class Const {
     public static final int WIN_SCORE = 100000;
     public static final int LOSS_SCORE = -100000;
     public static final Random RANDOM = new Random();
-    public static final int CHAR_TO_ROW = 65;
+    public static final int COL_CHAR_OFFSET = (int)'A';
     public static final Map<String, Move> ALL_MOVES = new HashMap<>(308);
 
     // Constantes du jeu
@@ -22,17 +22,17 @@ public final class Const {
     public static final int BLACK_PUSHER = 2;
     public static final int RED_PAWN = 3;
     public static final int RED_PUSHER = 4;
-    public static final int RED_WINNING_COL = 7;
-    public static final int BLACK_WINNING_COL = 0;
+    public static final int RED_WINNING_ROW = 7;
+    public static final int BLACK_WINNING_ROW = 0;
 
     static {
         // Mouvements pour rouge
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 for (int dir = -1; dir <= 1; dir++) {
-                    int toRow = row + dir;
-                    int toCol = col + 1;
-                    if (toRow >= 0 && toRow < 8 && toCol < 8) {
+                    int toRow = row + 1;
+                    int toCol = col + dir;
+                    if (toRow < 8 && 0 <= toCol && toCol < 8) {
                         Move move = new Move(row, col, toRow, toCol);
                         ALL_MOVES.put(move.toString(), move);
                     }
@@ -42,11 +42,11 @@ public final class Const {
 
         // Mouvements pour noir
         for (int row = 7; row >= 0; row--) {
-            for (int col = 7; col > 0; col--) {
+            for (int col = 7; col >= 0; col--) {
                 for (int dir = -1; dir <= 1; dir++) {
-                    int toRow = row - dir;
-                    int toCol = col - 1;
-                    if (toRow >= 0 && toRow < 8 && toCol < 8) {
+                    int toRow = row - 1;
+                    int toCol = col - dir;
+                    if (0 <= toRow && 0 <= toCol && toCol < 8) {
                         Move move = new Move(row, col, toRow, toCol);
                         ALL_MOVES.put(move.toString(), move);
                     }

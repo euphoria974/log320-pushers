@@ -85,6 +85,8 @@ class Client {
                     break;
                 }
             }
+
+            client.close();
         } catch (IOException e) {
             System.out.println(e);
         }

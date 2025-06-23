@@ -1,7 +1,8 @@
 package log320;
 
-import static log320.Const.BLACK_WINNING_COL;
-import static log320.Const.CHAR_TO_ROW;
+import static log320.Const.BLACK_WINNING_ROW;
+import static log320.Const.COL_CHAR_OFFSET;
+import static log320.Const.RED_WINNING_ROW;
 
 public class Move {
     private final int FROM_ROW, TO_ROW, FROM_COL, TO_COL;
@@ -13,8 +14,8 @@ public class Move {
         this.TO_ROW = toRow;
         this.FROM_COL = fromCol;
         this.TO_COL = toCol;
-        this.STRING_MOVE = "" + ((char) (fromRow + CHAR_TO_ROW)) + (fromCol + 1) + ((char) (toRow + CHAR_TO_ROW)) + (toCol + 1);
-        this.IS_WINNING = toCol == BLACK_WINNING_COL || toCol == Player.RED.getWinningCol();
+        this.STRING_MOVE = getMoveString(fromRow, fromCol, toRow, toCol);
+        this.IS_WINNING = toRow == BLACK_WINNING_ROW || toRow == RED_WINNING_ROW;
     }
 
     public int getFromRow() {
@@ -40,5 +41,10 @@ public class Move {
     @Override
     public String toString() {
         return STRING_MOVE;
+    }
+
+    public static String getMoveString(int fromRow, int fromCol, int toRow, int toCol) {
+        return "" + ((char) (fromCol + COL_CHAR_OFFSET)) + (fromRow + 1)
+                + ((char) (toCol + COL_CHAR_OFFSET)) + (toRow + 1);
     }
 }

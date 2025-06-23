@@ -7,7 +7,6 @@ import log320.Player;
 import java.util.List;
 
 import static log320.Const.*;
-import static log320.Helper.*;
 
 public class DefenseEvaluator implements IEvaluator {
     public int evaluate(Board board, Player player) {
@@ -22,57 +21,64 @@ public class DefenseEvaluator implements IEvaluator {
         int playerPushers = 0;
         int opponentPushers = 0;
 
-        for (int row = 0; row < 8; row++) {
-            if (board.getBoard()[row][player.getWinningCol()] == player.getPawn() || board.getBoard()[row][player.getWinningCol()] == player.getPusher())
+        // vérifie toutes les positions gagnantes d'abord
+        for (int col = 0; col < 8; col++) {
+            if (board.get(player.getWinningRow(), col) == player.getPawn()
+                    || board.get(player.getWinningRow(), col) == player.getPusher())
                 return WIN_SCORE;
-            if (board.getBoard()[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPawn() || board.getBoard()[row][player.getOpponent().getWinningCol()] == player.getOpponent().getPusher())
+            if (board.get(player.getOpponent().getWinningRow(), col) == player.getOpponent().getPawn()
+                    || board.get(player.getOpponent().getWinningRow(), col) == player.getOpponent().getPusher())
                 return LOSS_SCORE;
+        }
 
+        for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
-                if (board.getBoard()[row][col] == player.getPusher()) {
+                if (board.get(row, col) == player.getPusher()) {
                     playerPushers++;
                     score += 25;
 
-                    if (canEat(board.getBoard(), player, row, col)) {
+                    if (board.canCapture(player, row, col)) {
                         score += 55;
                     }
 
-                    if (col > 1 && col < 6 && board.getBoard()[row][col + player.getForwardColumn() + 1] == player.getOpponent().getPusher() && board.getBoard()[row][col + player.getForwardColumn()] == EMPTY) {
+                    if (row > 1 && row < 6 && board.get(row + player.getDirection() + 1, col) == player
+                            .getOpponent().getPusher() && board.get(row + player.getDirection(), col) == EMPTY) {
                         score += 200;
                     }
 
-                    if (isExposed(board.getBoard(), player, row, col)) {
+                    if (board.isExposed(player, row, col)) {
                         score -= 130;
                     }
 
-                    int distanceToWinningRow = 10 * (7 - Math.abs(col - player.getWinningCol()));
+                    int distanceToWinningRow = 10 * (7 - Math.abs(row - player.getWinningRow()));
                     score += distanceToWinningRow;
-                } else if (board.getBoard()[row][col] == player.getOpponent().getPusher()) {
+                } else if (board.get(row, col) == player.getOpponent().getPusher()) {
                     opponentPushers++;
-                    int distanceToWinningRow = 10 * (7 - Math.abs(col - player.getOpponent().getWinningCol()));
+                    int distanceToWinningRow = 10 * (7 - Math.abs(row - player.getOpponent().getWinningRow()));
                     score -= distanceToWinningRow;
-                } else if (board.getBoard()[row][col] == player.getPawn()) {
+                } else if (board.get(row, col) == player.getPawn()) {
                     score += 10;
 
-                    if (canEat(board.getBoard(), player, row, col)) {
+                    if (board.canCapture(player, row, col)) {
                         score += 100;
                     }
 
-                    if (isExposed(board.getBoard(), player, row, col)) {
+                    if (board.isExposed(player, row, col)) {
                         score -= 25;
                     }
 
-                    if (isPawnActivated(board.getBoard(), player, row, col)) {
-                        if (col > 1 && col < 6 && board.getBoard()[row][col + player.getForwardColumn() + 1] == player.getOpponent().getPusher() && board.getBoard()[row][col + player.getForwardColumn()] == EMPTY) {
+                    if (board.isPawnActivated(player, row, col)) {
+                        if (row > 1 && row < 6 && board.get(row + player.getDirection() + 1, col) == player.getOpponent().getPusher()
+                                && board.get(row + player.getDirection(), col) == EMPTY) {
                             score += 200;
                         }
 
-                        int distanceToWinningRow = 10 * (7 - Math.abs(col - player.getWinningCol()));
+                        int distanceToWinningRow = 10 * (7 - Math.abs(row - player.getWinningRow()));
                         score += distanceToWinningRow;
                     }
-                } else if (board.getBoard()[row][col] == player.getOpponent().getPawn()) {
-                    if (isPawnActivated(board.getBoard(), player, row, col)) {
-                        int distanceToWinningRow = 10 * (7 - Math.abs(col - player.getOpponent().getWinningCol()));
+                } else if (board.get(row, col) == player.getOpponent().getPawn()) {
+                    if (board.isPawnActivated(player, row, col)) {
+                        int distanceToWinningRow = 10 * (7 - Math.abs(row - player.getOpponent().getWinningRow()));
                         score -= distanceToWinningRow;
                     }
                 }
