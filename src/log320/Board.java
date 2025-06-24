@@ -187,7 +187,7 @@ public class Board {
         int opponentForward = player.getOpponent().getDirection();
         int playerForward = player.getDirection();
 
-        int[][] threatDiagonals = { { -1, opponentForward }, { 1, opponentForward } };
+        int[][] threatDiagonals = { { -opponentForward, -1 }, { -opponentForward, 1 } };
         boolean threatened = false;
         for (int[] dir : threatDiagonals) {
             int row = toRow + dir[0];
@@ -200,7 +200,7 @@ public class Board {
             }
         }
 
-        int[][] protectDiagonals = { { -1, -playerForward }, { 1, -playerForward } };
+        int[][] protectDiagonals = { { -playerForward, -1 }, { -playerForward, 1 } };
         boolean protectedByPusher = false;
 
         for (int[] dir : protectDiagonals) {
@@ -254,7 +254,7 @@ public class Board {
 
     public boolean isPawnActivated(Player player, int row, int col) {
         for (int d = -1; d <= 1; d++) {
-            if (row > 0 && row < 7 && get(row - player.getDirection(), col + d) == player.getPusher()) {
+            if (col+d >= 0 && col+d < 8 && get(row - player.getDirection(), col + d) == player.getPusher()) {
                 return true;
             }
         }
@@ -266,7 +266,7 @@ public class Board {
         int count = 0;
 
         for (int row = 0; row < 8; row++) {
-            for (int col = player == Player.RED ? 0 : 1; col < (player == Player.RED ? 7 : 8); col++) {
+            for (int col = 0; col < 8; col++) {
                 if (get(row, col) == player.getPusher()) {
                     int piece = get(row + player.getDirection(), col);
                     if (piece == player.getPawn()) {

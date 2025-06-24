@@ -28,9 +28,11 @@ class Client {
                     input.read(aBuffer, 0, size);
                     game = new Game(new String(aBuffer).trim(), Player.RED);
 
+                    game.printBoard();
                     System.out.println("Nouvelle partie! Vous jouez rouge");
 
                     String move = game.getNextMove().toString();
+                    System.out.println("Sending move : " + move);
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
                 }
@@ -60,6 +62,7 @@ class Client {
                     System.out.println("Votre tour");
 
                     String move = game.getNextMove().toString();
+                    System.out.println("Sending move : " + move);
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
                 }
