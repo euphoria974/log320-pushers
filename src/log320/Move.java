@@ -4,10 +4,13 @@ import static log320.Const.BLACK_WINNING_ROW;
 import static log320.Const.COL_CHAR_OFFSET;
 import static log320.Const.RED_WINNING_ROW;
 
-public class Move {
+public class Move implements Comparable<Move> {
     private final int FROM_ROW, TO_ROW, FROM_COL, TO_COL;
     private final String STRING_MOVE;
     private final boolean IS_WINNING;
+
+    // score currently associated to this move by the minmax algorithm
+    private int score;
 
     public Move(int fromRow, int fromCol, int toRow, int toCol) {
         this.FROM_ROW = fromRow;
@@ -36,6 +39,15 @@ public class Move {
 
     public boolean isWinning() {
         return IS_WINNING;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    @Override
+    public int compareTo(Move m) {
+        return Integer.compare(this.score, m.score);
     }
 
     @Override

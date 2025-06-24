@@ -1,116 +1,77 @@
 package log320;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.Collections;
 
 import static log320.Const.*;
 
 public class CPUPlayer {
     private final Board BOARD;
     private final Player PLAYER;
-    private final ArrayList<Move> BEST_MOVES = new ArrayList<>(20);
-    private final ArrayList<Move> CURRENT_BEST_MOVES = new ArrayList<>(20);
 
     public CPUPlayer(Board board, Player player) {
         this.BOARD = board;
         this.PLAYER = player;
     }
 
-    // Retourne la liste des coups possibles.  Cette liste contient
+    // Retourne la liste des coups possibles. Cette liste contient
     // plusieurs coups possibles si et seuleument si plusieurs coups
     // ont le même score.
-    public ArrayList<Move> getNextMove() {
+    public Move getNextMove() {
         long startTime = System.currentTimeMillis();
-        BEST_MOVES.clear();
-        int maxDepth = FIRST_MAX_DEPTH;
-        int bestScore;
+        // iterative deepening : start with a depth of 1 and adapt subsequent searches
+        // using the previous results to optimize alpha beta pruning
+        // https://www.chessprogramming.org/Iterative_Deepening
+        int maxDepth = 1;
         List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
-        ExecutorService executor;
-        List<Future<int[]>> futures;
 
+        // look for immediate winning moves
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
         if (winningMove != null) {
-            BEST_MOVES.add(winningMove);
-            return BEST_MOVES;
+            return winningMove;
         }
 
-        while (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
-            CURRENT_BEST_MOVES.clear();
-            bestScore = Integer.MIN_VALUE;
-            possibleMoves = BOARD.getPossibleMoves(PLAYER);
-            executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            futures = new ArrayList<>();
+        while(System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
+            int alpha = Integer.MIN_VALUE;
+            int beta = Integer.MAX_VALUE;
+            for(Move move : possibleMoves) {
+                BOARD.play(move);
 
-            for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
-                Move move = possibleMoves.get(moveIndex);
-                Board boardCopy = BOARD.clone();
-                boardCopy.play(move);
+                int score = alphaBeta(
+                    PLAYER.getOpponent(),
+                    BOARD,
+                    false, // maximizing for PLAYER, so the opponent will be minimizing
+                    alpha,
+                    beta,
+                    1,
+                    maxDepth,
+                    startTime
+                );
 
-                final int idx = moveIndex;
-                int finalMaxDepth = maxDepth;
-                futures.add(executor.submit(() -> {
-                    int score = alphaBeta(
-                            PLAYER.getOpponent(),
-                            boardCopy,
-                            false,
-                            Integer.MIN_VALUE,
-                            Integer.MAX_VALUE,
-                            1,
-                            finalMaxDepth,
-                            startTime
-                    );
-                    return new int[]{score, idx};
-                }));
-            }
+                BOARD.undo();
 
-            executor.shutdown();
+                System.out.println("Move: " + move + ", Score: " + score + ", Depth: " + maxDepth);
 
-            boolean completed = true;
-            for (Future<int[]> future : futures) {
-                try {
-                    int[] result = future.get();
-                    int score = result[0];
-                    int moveIndex = result[1];
-                    Move move = possibleMoves.get(moveIndex);
-
-                    System.out.println("Move: " + move + ", Score: " + score + ", Depth: " + maxDepth);
-
-                    if (score == MAX_TIME_SCORE) {
-                        completed = false;
-                        break;
-                    }
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        CURRENT_BEST_MOVES.clear();
-                        CURRENT_BEST_MOVES.add(move);
-                    } else if (score == bestScore) {
-                        CURRENT_BEST_MOVES.add(move);
-                    }
-                } catch (Exception e) {
-                    completed = false;
+                if(score == MAX_TIME_SCORE) {
                     break;
                 }
+
+                // set the score for sorting
+                move.setScore(score);
+
+                // update alpha for the root node
+                alpha = Math.max(alpha, score);
             }
 
-            if (completed && !CURRENT_BEST_MOVES.isEmpty()) {
-                BEST_MOVES.clear();
-                BEST_MOVES.addAll(CURRENT_BEST_MOVES);
-            } else {
-                break;
-            }
+            // sort by the best move to improve the chances of pruning branches
+            // in the next iteration with alpha beta pruning
+            Collections.sort(possibleMoves, Collections.reverseOrder());
 
-            maxDepth++;
+            maxDepth += 1;
         }
 
-        if (BEST_MOVES.isEmpty()) {
-            BEST_MOVES.add(possibleMoves.get(RANDOM.nextInt(possibleMoves.size())));
-        }
-
-        return BEST_MOVES;
+        // since we're sorting the list, the best move will always be first
+        return possibleMoves.get(0);
     }
 
     private int alphaBeta(Player player, Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
