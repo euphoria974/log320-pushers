@@ -119,6 +119,18 @@ public class Board {
         return EVALUATOR.evaluate(this, player);
     }
 
+    public boolean isGameOver() {
+        for (int col = 0; col < 8; ++col) {
+            if (get(RED_WINNING_ROW, col) == RED_PAWN || get(RED_WINNING_ROW, col) == RED_PUSHER) {
+                return true;
+            }
+            if (get(BLACK_WINNING_ROW, col) == BLACK_PAWN || get(BLACK_WINNING_ROW, col) == BLACK_PUSHER) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public ArrayList<Move> getPossibleMoves(Player player) {
         ArrayList<Move> possibleMoves = new ArrayList<>(32);
 
@@ -292,5 +304,4 @@ public class Board {
 
         return count;
     }
-
 }

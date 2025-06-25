@@ -6,9 +6,8 @@ import java.util.Random;
 
 public final class Const {
     // Heuristiques
-    public static final long MAX_TIME_MILLIS = 4940;
+    public static final long MAX_TIME_MILLIS = 4900;
     public static final int FIRST_MAX_DEPTH = 7;
-    public static final int MAX_TIME_SCORE = -100;
 
     public static final int WIN_SCORE = 100000;
     public static final int LOSS_SCORE = -100000;
