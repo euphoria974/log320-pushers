@@ -1,7 +1,5 @@
 package log320;
 
-import static log320.Const.ALL_MOVES;
-
 public class Game {
     private final Board BOARD;
     private final CPUPlayer CPU_PLAYER;
@@ -12,8 +10,10 @@ public class Game {
     }
 
     public Move getNextMove() {
+        BOARD.print(); // TODO debug, remove eventually
         Move move = CPU_PLAYER.getNextMove();
         BOARD.play(move);
+        System.out.println("Picking move " + move + " with score " + move.getScore());
         return move;
     }
 
@@ -22,8 +22,7 @@ public class Game {
     }
 
     public void play(String moveString) {
-        Move move = ALL_MOVES.get(moveString);
-        BOARD.play(move);
+        BOARD.play(Move.fromString(moveString));
     }
 
     public void printBoard() {

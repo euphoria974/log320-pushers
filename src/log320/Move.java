@@ -6,7 +6,6 @@ import static log320.Const.RED_WINNING_ROW;
 
 public class Move implements Comparable<Move> {
     private final int FROM_ROW, TO_ROW, FROM_COL, TO_COL;
-    private final String STRING_MOVE;
     private final boolean IS_WINNING;
 
     // score currently associated to this move by the minmax algorithm
@@ -17,7 +16,6 @@ public class Move implements Comparable<Move> {
         this.TO_ROW = toRow;
         this.FROM_COL = fromCol;
         this.TO_COL = toCol;
-        this.STRING_MOVE = getMoveString(fromRow, fromCol, toRow, toCol);
         this.IS_WINNING = toRow == BLACK_WINNING_ROW || toRow == RED_WINNING_ROW;
     }
 
@@ -45,6 +43,10 @@ public class Move implements Comparable<Move> {
         this.score = score;
     }
 
+    public int getScore() {
+        return score;
+    }
+
     @Override
     public int compareTo(Move m) {
         return Integer.compare(this.score, m.score);
@@ -52,11 +54,16 @@ public class Move implements Comparable<Move> {
 
     @Override
     public String toString() {
-        return STRING_MOVE;
+        return "" + ((char) (FROM_COL + COL_CHAR_OFFSET)) + (FROM_ROW + 1)
+                + ((char) (TO_COL + COL_CHAR_OFFSET)) + (TO_ROW + 1);
     }
 
-    public static String getMoveString(int fromRow, int fromCol, int toRow, int toCol) {
-        return "" + ((char) (fromCol + COL_CHAR_OFFSET)) + (fromRow + 1)
-                + ((char) (toCol + COL_CHAR_OFFSET)) + (toRow + 1);
+    public static Move fromString(String moveStr) {
+        return new Move(
+            moveStr.charAt(1) - '1', // fromRow
+            moveStr.charAt(0) - COL_CHAR_OFFSET, // fromCol
+            moveStr.charAt(3) - '1', // toRow
+            moveStr.charAt(2) - COL_CHAR_OFFSET // toCol
+        );
     }
 }

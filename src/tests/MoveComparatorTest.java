@@ -12,8 +12,8 @@ public class MoveComparatorTest {
         board.place(1, 3, Player.RED.getPusher());
         MoveComparator moveComparator = new MoveComparator(board, Player.RED);
 
-        Move move1 = Const.ALL_MOVES.get("A7B8");
-        Move move2 = Const.ALL_MOVES.get("B4C5");
+        Move move1 = Move.fromString("A7B8");
+        Move move2 = Move.fromString("B4C5");
 
         List<Move> moves = new ArrayList<>();
 

@@ -141,45 +141,39 @@ public class Board {
                     int targetRow = row + player.getDirection();
                     int pusherRow = row - player.getDirection();
                     if(get(targetRow, col) == EMPTY && get(pusherRow, col) == player.getPusher()) {
-                        Move move = ALL_MOVES.get(Move.getMoveString(row, col, targetRow, col));
-                        possibleMoves.add(move);
+                        possibleMoves.add(new Move(row, col, targetRow, col));
                     }
 
                     if(col > 0 && col < 7) {
                         if(get(pusherRow, col + 1) == player.getPusher() && (get(targetRow, col - 1) == EMPTY || 
                             get(targetRow, col - 1) == player.getOpponent().getPawn() || 
                             get(targetRow, col - 1) == player.getOpponent().getPusher())) {
-                                Move move = ALL_MOVES.get(Move.getMoveString(row, col, targetRow, col - 1));
-                                possibleMoves.add(move);
+                                possibleMoves.add(new Move(row, col, targetRow, col - 1));
                         }
 
                         if(get(pusherRow, col - 1) == player.getPusher() && (get(targetRow, col + 1) == EMPTY || 
                             get(targetRow, col + 1) == player.getOpponent().getPawn() || 
                             get(targetRow, col + 1) == player.getOpponent().getPusher())) {
-                                Move move = ALL_MOVES.get(Move.getMoveString(row, col, targetRow, col + 1));
-                                possibleMoves.add(move);
+                                possibleMoves.add(new Move(row, col, targetRow, col + 1));
                         }
                     }
                 } else if(get(row, col) == player.getPusher()) {
                     // identifie les moves possibles pour un pusher
                     int targetRow = row + player.getDirection();
                     if(get(targetRow, col) == EMPTY) {
-                        Move move = ALL_MOVES.get(Move.getMoveString(row, col, targetRow, col));
-                        possibleMoves.add(move);
+                        possibleMoves.add(new Move(row, col, targetRow, col));
                     }
 
                     if(col > 0 && (get(targetRow, col - 1) == EMPTY || 
                         get(targetRow, col - 1) == player.getOpponent().getPawn() || 
                         get(targetRow, col - 1) == player.getOpponent().getPusher())) {
-                            Move move = ALL_MOVES.get(Move.getMoveString(row, col, targetRow, col - 1));
-                            possibleMoves.add(move);
+                            possibleMoves.add(new Move(row, col, targetRow, col - 1));
                     }
 
                     if(col < 7 && (get(targetRow, col + 1) == EMPTY || 
                         get(targetRow, col + 1) == player.getOpponent().getPawn() || 
                         get(targetRow, col + 1) == player.getOpponent().getPusher())) {
-                            Move move = ALL_MOVES.get(Move.getMoveString(row, col, targetRow, col + 1));
-                            possibleMoves.add(move);
+                            possibleMoves.add(new Move(row, col, targetRow, col + 1));
                     }
                 }
             }
