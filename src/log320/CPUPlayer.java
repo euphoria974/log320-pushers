@@ -24,6 +24,7 @@ public class CPUPlayer {
         // https://www.chessprogramming.org/Iterative_Deepening
         int maxDepth = 1;
         List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
+        Move bestMove = null;
 
         // look for immediate winning moves
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
@@ -32,13 +33,15 @@ public class CPUPlayer {
         }
 
         while(System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
+            int currentBestScore = Integer.MIN_VALUE;
+            Move currentBestMove = null;
+            
             for(Move move : possibleMoves) {
                 BOARD.play(move);
 
                 int score = alphaBeta(
                     PLAYER.getOpponent(),
                     BOARD,
-                    false, // maximizing for PLAYER, so the opponent will be minimizing
                     Integer.MIN_VALUE,
                     Integer.MAX_VALUE,
                     1,
@@ -52,7 +55,13 @@ public class CPUPlayer {
 
                 // set the score for sorting
                 move.setScore(score);
+                if (score > currentBestScore) {
+                    currentBestScore = score;
+                    currentBestMove = move;
+                }
             }
+
+            bestMove = currentBestMove;
 
             // sort by the best move to improve the chances of pruning branches
             // in the next iteration with alpha beta pruning
@@ -61,56 +70,42 @@ public class CPUPlayer {
             maxDepth += 1;
         }
 
-        // since we're sorting the list, the best move will always be first
-        return possibleMoves.get(0);
+        return bestMove;
     }
 
-    private int alphaBeta(Player player, Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
+    private int alphaBeta(Player player, Board board, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
         if (isTimeLimitExceeded(startTime) || currentDepth >= maxDepth || board.isGameOver()) {
-            return board.evaluate(PLAYER);
+            return board.evaluate(player);
         }
 
         List<Move> possibleMoves = board.getPossibleMoves(player);
         if(possibleMoves.isEmpty()) {
-            return board.evaluate(PLAYER);
+            return board.evaluate(player);
         }
+
+        Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
+        if (winningMove != null) {
+            return player == PLAYER ? WIN_SCORE : LOSS_SCORE;
+        }
+
+        int value = Integer.MIN_VALUE;
+
+        for (Move move : possibleMoves) {
+            board.play(move);
+            // https://en.wikipedia.org/wiki/Negamax
+            int score = -alphaBeta(player.getOpponent(), board, -beta, -alpha, currentDepth + 1, maxDepth, startTime);
+            board.undo();
+
+            value = Math.max(value, score);
         
-        if (isMax) {
-            int maxScore = Integer.MIN_VALUE;
+            alpha = Math.max(alpha, value);
 
-            for (Move move : possibleMoves) {
-                board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
-                board.undo();
-
-                maxScore = Math.max(maxScore, value);
-
-                if (maxScore >= beta) {
-                    break;
-                }
-
-                alpha = Math.max(alpha, maxScore);
+            if (value >= beta) {
+                break;
             }
-
-            return maxScore;
-        } else {
-            int minScore = Integer.MAX_VALUE;
-
-            for (Move move : possibleMoves) {
-                board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
-                board.undo();
-
-                minScore = Math.min(minScore, value);
-
-                if (minScore <= alpha) {
-                    break;
-                }
-
-                beta = Math.min(beta, minScore);
-            }
-            return minScore;
         }
+
+        return value;
     }
 
     private boolean isTimeLimitExceeded(long startTime) {
