@@ -1,7 +1,7 @@
 package log320;
 
-import java.util.List;
 import java.util.Collections;
+import java.util.List;
 
 import static log320.Const.*;
 
@@ -32,21 +32,20 @@ public class CPUPlayer {
             return winningMove;
         }
 
-        while(System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
+        while (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
             int currentBestScore = Integer.MIN_VALUE;
             Move currentBestMove = null;
-            
-            for(Move move : possibleMoves) {
+
+            for (Move move : possibleMoves) {
                 BOARD.play(move);
 
-                int score = alphaBeta(
-                    PLAYER.getOpponent(),
-                    BOARD,
-                    Integer.MIN_VALUE,
-                    Integer.MAX_VALUE,
-                    1,
-                    maxDepth,
-                    startTime
+                int score = negamax(
+                        PLAYER.getOpponent(),
+                        Integer.MIN_VALUE,
+                        Integer.MAX_VALUE,
+                        0,
+                        maxDepth,
+                        startTime
                 );
 
                 BOARD.undo();
@@ -73,14 +72,14 @@ public class CPUPlayer {
         return bestMove;
     }
 
-    private int alphaBeta(Player player, Board board, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
-        if (isTimeLimitExceeded(startTime) || currentDepth >= maxDepth || board.isGameOver()) {
-            return board.evaluate(player);
+    private int negamax(Player player, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
+        if (isTimeLimitExceeded(startTime) || currentDepth >= maxDepth || BOARD.isGameOver()) {
+            return BOARD.evaluate(player);
         }
 
-        List<Move> possibleMoves = board.getPossibleMoves(player);
-        if(possibleMoves.isEmpty()) {
-            return board.evaluate(player);
+        List<Move> possibleMoves = BOARD.getPossibleMoves(player);
+        if (possibleMoves.isEmpty()) {
+            return BOARD.evaluate(player);
         }
 
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
@@ -91,13 +90,12 @@ public class CPUPlayer {
         int value = Integer.MIN_VALUE;
 
         for (Move move : possibleMoves) {
-            board.play(move);
+            BOARD.play(move);
             // https://en.wikipedia.org/wiki/Negamax
-            int score = -alphaBeta(player.getOpponent(), board, -beta, -alpha, currentDepth + 1, maxDepth, startTime);
-            board.undo();
+            int score = -negamax(player.getOpponent(), -beta, -alpha, currentDepth + 1, maxDepth, startTime);
+            BOARD.undo();
 
             value = Math.max(value, score);
-        
             alpha = Math.max(alpha, value);
 
             if (value >= beta) {

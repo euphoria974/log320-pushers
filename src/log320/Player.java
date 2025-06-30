@@ -17,7 +17,7 @@ public enum Player {
         BLACK.OPPONENT_PLAYER = RED;
     }
 
-    private Player(int pawn, int pusher, int winningRow, int forwardDirection) {
+    Player(int pawn, int pusher, int winningRow, int forwardDirection) {
         this.PAWN = pawn;
         this.PUSHER = pusher;
         this.WINNING_ROW = winningRow;

@@ -1,8 +1,5 @@
 package log320;
 
-import log320.evaluators.DefenseEvaluator;
-import log320.evaluators.IEvaluator;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -14,7 +11,7 @@ public class Board {
     private final int[] BOARD = new int[64];
     private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
     private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>(1000);
-    private final IEvaluator EVALUATOR = new DefenseEvaluator();
+    private final BoardEvaluator EVALUATOR = new BoardEvaluator(this);
 
     private Move lastMove = null;
     private int moveStatePoolIndex = 0;
@@ -77,8 +74,8 @@ public class Board {
 
     public void print() {
         // les rangées sont stockées de bas en haut, donc l'impression se fait à l'envers
-        for(int row = 7; row >= 0; --row) {
-            for(int col = 0; col < 8; ++col) {
+        for (int row = 7; row >= 0; --row) {
+            for (int col = 0; col < 8; ++col) {
                 System.out.print(get(row, col) + " ");
             }
             System.out.println();
@@ -93,17 +90,17 @@ public class Board {
 
         UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
         MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece));
-        
+
         place(move.getFromRow(), move.getFromCol(), EMPTY);
         place(move.getToRow(), move.getToCol(), movedPiece);
     }
 
     public void place(int row, int col, int piece) {
-        BOARD[row*8 + col] = piece;
+        BOARD[row * 8 + col] = piece;
     }
 
     public int get(int row, int col) {
-        return BOARD[row*8 + col];
+        return BOARD[row * 8 + col];
     }
 
     public void undo() {
@@ -116,7 +113,7 @@ public class Board {
     }
 
     public int evaluate(Player player) {
-        return EVALUATOR.evaluate(this, player);
+        return EVALUATOR.evaluate(player);
     }
 
     public boolean isGameOver() {
@@ -134,46 +131,46 @@ public class Board {
     public ArrayList<Move> getPossibleMoves(Player player) {
         ArrayList<Move> possibleMoves = new ArrayList<>(32);
 
-        for(int row = 0; row < 8; row++) {
-            for(int col = 0; col < 8; col++) {
-                if(get(row, col) == player.getPawn()) {
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                if (get(row, col) == player.getPawn()) {
                     // identifie les moves possibles pour un pion simple
                     int targetRow = row + player.getDirection();
                     int pusherRow = row - player.getDirection();
-                    if(get(targetRow, col) == EMPTY && get(pusherRow, col) == player.getPusher()) {
+                    if (get(targetRow, col) == EMPTY && get(pusherRow, col) == player.getPusher()) {
                         possibleMoves.add(new Move(row, col, targetRow, col));
                     }
 
-                    if(col > 0 && col < 7) {
-                        if(get(pusherRow, col + 1) == player.getPusher() && (get(targetRow, col - 1) == EMPTY || 
-                            get(targetRow, col - 1) == player.getOpponent().getPawn() || 
-                            get(targetRow, col - 1) == player.getOpponent().getPusher())) {
-                                possibleMoves.add(new Move(row, col, targetRow, col - 1));
+                    if (col > 0 && col < 7) {
+                        if (get(pusherRow, col + 1) == player.getPusher() && (get(targetRow, col - 1) == EMPTY ||
+                                get(targetRow, col - 1) == player.getOpponent().getPawn() ||
+                                get(targetRow, col - 1) == player.getOpponent().getPusher())) {
+                            possibleMoves.add(new Move(row, col, targetRow, col - 1));
                         }
 
-                        if(get(pusherRow, col - 1) == player.getPusher() && (get(targetRow, col + 1) == EMPTY || 
-                            get(targetRow, col + 1) == player.getOpponent().getPawn() || 
-                            get(targetRow, col + 1) == player.getOpponent().getPusher())) {
-                                possibleMoves.add(new Move(row, col, targetRow, col + 1));
+                        if (get(pusherRow, col - 1) == player.getPusher() && (get(targetRow, col + 1) == EMPTY ||
+                                get(targetRow, col + 1) == player.getOpponent().getPawn() ||
+                                get(targetRow, col + 1) == player.getOpponent().getPusher())) {
+                            possibleMoves.add(new Move(row, col, targetRow, col + 1));
                         }
                     }
-                } else if(get(row, col) == player.getPusher()) {
+                } else if (get(row, col) == player.getPusher()) {
                     // identifie les moves possibles pour un pusher
                     int targetRow = row + player.getDirection();
-                    if(get(targetRow, col) == EMPTY) {
+                    if (get(targetRow, col) == EMPTY) {
                         possibleMoves.add(new Move(row, col, targetRow, col));
                     }
 
-                    if(col > 0 && (get(targetRow, col - 1) == EMPTY || 
-                        get(targetRow, col - 1) == player.getOpponent().getPawn() || 
-                        get(targetRow, col - 1) == player.getOpponent().getPusher())) {
-                            possibleMoves.add(new Move(row, col, targetRow, col - 1));
+                    if (col > 0 && (get(targetRow, col - 1) == EMPTY ||
+                            get(targetRow, col - 1) == player.getOpponent().getPawn() ||
+                            get(targetRow, col - 1) == player.getOpponent().getPusher())) {
+                        possibleMoves.add(new Move(row, col, targetRow, col - 1));
                     }
 
-                    if(col < 7 && (get(targetRow, col + 1) == EMPTY || 
-                        get(targetRow, col + 1) == player.getOpponent().getPawn() || 
-                        get(targetRow, col + 1) == player.getOpponent().getPusher())) {
-                            possibleMoves.add(new Move(row, col, targetRow, col + 1));
+                    if (col < 7 && (get(targetRow, col + 1) == EMPTY ||
+                            get(targetRow, col + 1) == player.getOpponent().getPawn() ||
+                            get(targetRow, col + 1) == player.getOpponent().getPusher())) {
+                        possibleMoves.add(new Move(row, col, targetRow, col + 1));
                     }
                 }
             }
@@ -193,7 +190,7 @@ public class Board {
         int opponentForward = player.getOpponent().getDirection();
         int playerForward = player.getDirection();
 
-        int[][] threatDiagonals = { { -opponentForward, -1 }, { -opponentForward, 1 } };
+        int[][] threatDiagonals = {{-opponentForward, -1}, {-opponentForward, 1}};
         boolean threatened = false;
         for (int[] dir : threatDiagonals) {
             int row = toRow + dir[0];
@@ -206,7 +203,7 @@ public class Board {
             }
         }
 
-        int[][] protectDiagonals = { { -playerForward, -1 }, { -playerForward, 1 } };
+        int[][] protectDiagonals = {{-playerForward, -1}, {-playerForward, 1}};
         boolean protectedByPusher = false;
 
         for (int[] dir : protectDiagonals) {
@@ -226,9 +223,9 @@ public class Board {
     public boolean canCapture(Player player, int r, int c) {
         int playerForward = player.getDirection();
 
-        int[][] threatDiagonals = { { playerForward, -1 }, { playerForward, 1 } };
+        int[][] threatDiagonals = {{playerForward, -1}, {playerForward, 1}};
 
-        int[][] protectDiagonals = { { -playerForward, -1 }, { -playerForward, 1 } };
+        int[][] protectDiagonals = {{-playerForward, -1}, {-playerForward, 1}};
 
         for (int[] direction : threatDiagonals) {
             int row = r + direction[0];
@@ -260,7 +257,7 @@ public class Board {
 
     public boolean isPawnActivated(Player player, int row, int col) {
         for (int d = -1; d <= 1; d++) {
-            if (col+d >= 0 && col+d < 8 && get(row - player.getDirection(), col + d) == player.getPusher()) {
+            if (col + d >= 0 && col + d < 8 && get(row - player.getDirection(), col + d) == player.getPusher()) {
                 return true;
             }
         }
