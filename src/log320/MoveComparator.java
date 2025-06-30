@@ -13,7 +13,7 @@ public class MoveComparator implements Comparator<Move> {
 
     @Override
     public int compare(Move m1, Move m2) {
-        return Integer.compare(getMoveScore(m2), getMoveScore(m1));
+        return Integer.compare(getMoveScore(m1), getMoveScore(m2));
     }
 
     public int getMoveScore(Move move) {

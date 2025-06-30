@@ -117,15 +117,28 @@ public class Board {
     }
 
     public boolean isGameOver() {
-        for (int col = 0; col < 8; ++col) {
-            if (get(RED_WINNING_ROW, col) == RED_PAWN || get(RED_WINNING_ROW, col) == RED_PUSHER) {
-                return true;
-            }
-            if (get(BLACK_WINNING_ROW, col) == BLACK_PAWN || get(BLACK_WINNING_ROW, col) == BLACK_PUSHER) {
-                return true;
+        int redPushers = 0;
+        int blackPushers = 0;
+
+        for (int row = 0; row < 8; row++) {
+            for (int col = 0; col < 8; col++) {
+                if (get(RED_WINNING_ROW, col) == RED_PAWN || get(RED_WINNING_ROW, col) == RED_PUSHER) {
+                    return true;
+                }
+
+                if (get(BLACK_WINNING_ROW, col) == BLACK_PAWN || get(BLACK_WINNING_ROW, col) == BLACK_PUSHER) {
+                    return true;
+                }
+
+                if (get(row, col) == RED_PUSHER) {
+                    redPushers++;
+                } else if (get(row, col) == BLACK_PUSHER) {
+                    blackPushers++;
+                }
             }
         }
-        return false;
+
+        return redPushers == 0 || blackPushers == 0;
     }
 
     public ArrayList<Move> getPossibleMoves(Player player) {
@@ -220,12 +233,10 @@ public class Board {
         return threatened && !protectedByPusher;
     }
 
-    public boolean canCapture(Player player, int r, int c) {
+    public boolean canCapturePusher(Player player, int r, int c) {
         int playerForward = player.getDirection();
 
         int[][] threatDiagonals = {{playerForward, -1}, {playerForward, 1}};
-
-        int[][] protectDiagonals = {{-playerForward, -1}, {-playerForward, 1}};
 
         for (int[] direction : threatDiagonals) {
             int row = r + direction[0];
@@ -236,16 +247,9 @@ public class Board {
                         || get(row, col) == player.getOpponent().getPusher()) {
                     if (get(r, c) == player.getPusher()) {
                         return true;
-                    }
-
-                    for (int[] dir : protectDiagonals) {
-                        int ro = r + dir[0];
-                        int co = c + dir[1];
-
-                        if (ro >= 0 && ro < 8 && co >= 0 && co < 8) {
-                            if (get(ro, co) == player.getPusher()) {
-                                return true;
-                            }
+                    } else if (get(r, c) == player.getPawn()) {
+                        if (isPawnActivated(player, r, c)) {
+                            return true;
                         }
                     }
                 }
@@ -256,43 +260,12 @@ public class Board {
     }
 
     public boolean isPawnActivated(Player player, int row, int col) {
-        for (int d = -1; d <= 1; d++) {
-            if (col + d >= 0 && col + d < 8 && get(row - player.getDirection(), col + d) == player.getPusher()) {
+        for (int dir = -1; dir <= 1; dir++) {
+            if (col + dir >= 0 && col + dir < 8 && get(row - player.getDirection(), col + dir) == player.getPusher()) {
                 return true;
             }
         }
 
         return false;
-    }
-
-    public int countPotentialPushes(Player player) {
-        int count = 0;
-
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                if (get(row, col) == player.getPusher()) {
-                    int piece = get(row + player.getDirection(), col);
-                    if (piece == player.getPawn()) {
-                        count++;
-                    }
-
-                    if (col > 0) {
-                        piece = get(row + player.getDirection(), col - 1);
-                        if (piece == player.getPawn()) {
-                            count++;
-                        }
-                    }
-
-                    if (col < 7) {
-                        piece = get(row + player.getDirection(), col + 1);
-                        if (piece == player.getPawn()) {
-                            count++;
-                        }
-                    }
-                }
-            }
-        }
-
-        return count;
     }
 }

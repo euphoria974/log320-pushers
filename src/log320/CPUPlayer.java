@@ -1,13 +1,19 @@
 package log320;
 
+import log320.transposition.NodeType;
+import log320.transposition.TranspositionTable;
+import log320.transposition.ZobristHash;
+
 import java.util.Collections;
 import java.util.List;
 
-import static log320.Const.*;
+import static log320.Const.FIRST_MAX_DEPTH;
+import static log320.Const.MAX_TIME_MILLIS;
 
 public class CPUPlayer {
     private final Board BOARD;
     private final Player PLAYER;
+    private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
     public CPUPlayer(Board board, Player player) {
         this.BOARD = board;
@@ -22,7 +28,7 @@ public class CPUPlayer {
         // iterative deepening : start with a depth of 1 and adapt subsequent searches
         // using the previous results to optimize alpha beta pruning
         // https://www.chessprogramming.org/Iterative_Deepening
-        int maxDepth = 1;
+        int maxDepth = FIRST_MAX_DEPTH;
         List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
         Move bestMove = null;
 
@@ -33,6 +39,8 @@ public class CPUPlayer {
         }
 
         while (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
+            TRANSPOSITION_TABLE.markAllAncient();
+
             int currentBestScore = Integer.MIN_VALUE;
             Move currentBestMove = null;
 
@@ -64,7 +72,7 @@ public class CPUPlayer {
 
             // sort by the best move to improve the chances of pruning branches
             // in the next iteration with alpha beta pruning
-            Collections.sort(possibleMoves, Collections.reverseOrder());
+            possibleMoves.sort(Collections.reverseOrder());
 
             maxDepth += 1;
         }
@@ -73,6 +81,19 @@ public class CPUPlayer {
     }
 
     private int negamax(Player player, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
+        long hash = ZobristHash.computeHash(BOARD);
+
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(hash);
+        if (entry != null && entry.depth >= maxDepth - currentDepth) {
+            if (entry.type == NodeType.EXACT) {
+                return entry.score;
+            } else if (entry.type == NodeType.ALPHA && entry.score <= alpha) {
+                return alpha;
+            } else if (entry.type == NodeType.BETA && entry.score >= beta) {
+                return beta;
+            }
+        }
+
         if (isTimeLimitExceeded(startTime) || currentDepth >= maxDepth || BOARD.isGameOver()) {
             return BOARD.evaluate(player);
         }
@@ -84,10 +105,11 @@ public class CPUPlayer {
 
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
         if (winningMove != null) {
-            return player == PLAYER ? WIN_SCORE : LOSS_SCORE;
+            return player == PLAYER ? Integer.MAX_VALUE : Integer.MIN_VALUE;
         }
 
         int value = Integer.MIN_VALUE;
+        NodeType nodeType = NodeType.ALPHA;
 
         for (Move move : possibleMoves) {
             BOARD.play(move);
@@ -96,12 +118,19 @@ public class CPUPlayer {
             BOARD.undo();
 
             value = Math.max(value, score);
-            alpha = Math.max(alpha, value);
+
+            if (value > alpha) {
+                alpha = value;
+                nodeType = NodeType.EXACT;
+            }
 
             if (value >= beta) {
+                nodeType = NodeType.BETA;
                 break;
             }
         }
+
+        TRANSPOSITION_TABLE.put(hash, maxDepth - currentDepth, value, nodeType);
 
         return value;
     }
