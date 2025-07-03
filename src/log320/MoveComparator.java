@@ -32,7 +32,7 @@ public class MoveComparator implements Comparator<Move> {
 
         // Capture
         if (destPiece == PLAYER.getOpponent().getPusher()) {
-            score += 20;
+            score += 30;
         } else if (destPiece == PLAYER.getOpponent().getPawn()) {
             score += 8;
         }
