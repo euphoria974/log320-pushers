@@ -93,7 +93,6 @@ public class CPUPlayer {
                         CURRENT_BEST_MOVES.add(move);
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
                     break;
                 }
             }
@@ -111,7 +110,7 @@ public class CPUPlayer {
             BEST_MOVES.addAll(possibleMoves);
         }
 
-        System.out.println("\033[32;40mBest moves found: " + BEST_MOVES + " with score: " + finalBestScore);
+        System.out.println("\033[32;40mBest moves found: " + BEST_MOVES + " with score: " + finalBestScore + " at depth: " + maxDepth);
 
         Collections.shuffle(BEST_MOVES);
         return BEST_MOVES.getFirst();
