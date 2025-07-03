@@ -9,7 +9,7 @@ import static log320.Const.ALL_MOVES;
 
 class Client {
     public static void main(String[] args) {
-        Game game = null;
+        final Game game = new Game();
         ALL_MOVES.get("A1A2"); // Initialize the static map of all possible moves
 
         try {
@@ -26,7 +26,7 @@ class Client {
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
-                    game = new Game(new String(aBuffer).trim(), Player.RED);
+                    game.start(new String(aBuffer).trim(), Player.RED);
 
                     System.out.println("\033[93;40mNouvelle partie! Vous jouez rouge");
 
@@ -41,7 +41,7 @@ class Client {
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
-                    game = new Game(new String(aBuffer).trim(), Player.BLACK);
+                    game.start(new String(aBuffer).trim(), Player.BLACK);
                 }
 
                 // Le serveur demande le prochain coup

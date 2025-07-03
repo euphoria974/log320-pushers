@@ -6,7 +6,6 @@ import java.util.Map;
 public final class Const {
     // Heuristiques
     public static final long MAX_TIME_MILLIS = 4940;
-    public static final int FIRST_MAX_DEPTH = 4;
 
     public static final int WIN_SCORE = 1000000000;
     public static final int LOSS_SCORE = -1000000000;

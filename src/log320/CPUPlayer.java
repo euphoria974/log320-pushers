@@ -33,10 +33,12 @@ public class CPUPlayer {
         ExecutorService executor;
         List<Future<int[]>> futures;
 
+        /* TODO check if the new implementation of winScore - depth can eliminate this
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
         if (winningMove != null) {
             return winningMove;
         }
+         */
 
         timeLoop:
         while (!isTimeExceeded(startTime)) {
@@ -47,8 +49,7 @@ public class CPUPlayer {
 
             for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
                 Move move = possibleMoves.get(moveIndex);
-                Board boardCopy = BOARD.clone();
-                boardCopy.play(move);
+                Board boardCopy = BOARD.clone(move);
 
                 final int idx = moveIndex;
                 int finalMaxDepth = maxDepth;
@@ -92,6 +93,7 @@ public class CPUPlayer {
                         CURRENT_BEST_MOVES.add(move);
                     }
                 } catch (Exception e) {
+                    System.out.println("\033[91;40m" + e.getMessage());
                     break;
                 }
             }
@@ -121,7 +123,16 @@ public class CPUPlayer {
         }
 
         int boardScore = board.evaluate(PLAYER);
-        if (boardScore >= WIN_SCORE || boardScore <= LOSS_SCORE || currentDepth >= maxDepth) {
+        // pour favoriser les coups gagnants on soustrait le depth
+        if (boardScore >= WIN_SCORE) {
+            return WIN_SCORE - currentDepth;
+        }
+
+        if (boardScore <= LOSS_SCORE) {
+            return LOSS_SCORE + currentDepth;
+        }
+
+        if (currentDepth >= maxDepth) {
             return boardScore;
         }
 

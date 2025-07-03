@@ -3,30 +3,32 @@ package log320;
 import static log320.Const.ALL_MOVES;
 
 public class Game {
-    private final Board BOARD;
-    private final CPUPlayer CPU_PLAYER;
+    private Board board;
+    private CPUPlayer cpuPlayer;
 
-    public Game(String boardState, Player currentPlayer) {
-        this.BOARD = new Board(boardState);
-        this.CPU_PLAYER = new CPUPlayer(BOARD, currentPlayer);
+    public Game() {}
+
+    public void start(String boardState, Player currentPlayer) {
+        this.board = new Board(boardState);
+        this.cpuPlayer = new CPUPlayer(board, currentPlayer);
     }
 
     public Move getNextMove() {
-        Move move = CPU_PLAYER.getNextMove();
-        BOARD.play(move);
+        Move move = cpuPlayer.getNextMove();
+        board.play(move);
         return move;
     }
 
     public void play(String moveString) {
         Move move = ALL_MOVES.get(moveString);
-        BOARD.play(move);
+        board.play(move);
     }
 
     public void printBoard() {
-        BOARD.print();
+        board.print();
     }
 
     public Move getLastMove() {
-        return BOARD.getLastMove();
+        return board.getLastMove();
     }
 }

@@ -164,6 +164,14 @@ public class Board {
         return clone;
     }
 
+    // permet de cloner et joeur un moe
+    public Board clone(Move move) {
+        Board clone = new Board();
+        System.arraycopy(this.BOARD, 0, clone.BOARD, 0, 64);
+        clone.play(move);
+        return clone;
+    }
+
     public boolean isRowCovered(Player player, int row) {
         Boolean[] covered = new Boolean[8];
         Arrays.fill(covered, false);
