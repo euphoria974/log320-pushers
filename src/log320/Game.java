@@ -13,6 +13,12 @@ public class Game {
         this.cpuPlayer = new CPUPlayer(board, currentPlayer);
     }
 
+    public void start(Player currentPlayer) {
+        this.board = new Board();
+        this.board.init();
+        this.cpuPlayer = new CPUPlayer(board, currentPlayer);
+    }
+
     public Move getNextMove() {
         Move move = cpuPlayer.getNextMove();
         board.play(move);

@@ -21,6 +21,7 @@ public class BoardTest {
         System.out.println(board.isRowCovered(Player.BLACK, 5)); // true
         System.out.println(board.isRowCovered(Player.BLACK, 4));  // false
 
+        System.out.println("isExposed:");
         board.clear();
         board.set(0, 0, Player.RED.getPusher());
         board.set(1, 1, Player.BLACK.getPawn());
@@ -35,6 +36,7 @@ public class BoardTest {
             board.set(7, col, Player.BLACK.getPusher());
         }
 
+        System.out.println("possible moves:");
         board.print();
 
         System.out.println(board.getPossibleMoves(Player.RED));

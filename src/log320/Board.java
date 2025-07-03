@@ -210,7 +210,7 @@ public class Board {
         if ((col > 0 && get(forwardRow, col - 1) == player.getOpponent().getPusher()) ||
                 (col < 7 && get(forwardRow, col + 1) == player.getOpponent().getPusher())) {
             return true;
-        } else if (col > 0 && doubleForwardRow >= 0 && doubleForwardRow < 8 &&
+        } else if (col > 1 && doubleForwardRow >= 0 && doubleForwardRow < 8 &&
                 get(forwardRow, col - 1) == player.getOpponent().getPawn() &&
                 get(doubleForwardRow, col - 2) == player.getOpponent().getPusher()) {
             return true;

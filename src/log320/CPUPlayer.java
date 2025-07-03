@@ -33,13 +33,6 @@ public class CPUPlayer {
         ExecutorService executor;
         List<Future<int[]>> futures;
 
-        /* TODO check if the new implementation of winScore - depth can eliminate this
-        Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
-        if (winningMove != null) {
-            return winningMove;
-        }
-         */
-
         timeLoop:
         while (!isTimeExceeded(startTime)) {
             CURRENT_BEST_MOVES.clear();
