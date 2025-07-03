@@ -1,6 +1,7 @@
 package log320;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -22,38 +23,38 @@ public class CPUPlayer {
     // Retourne la liste des coups possibles.  Cette liste contient
     // plusieurs coups possibles si et seuleument si plusieurs coups
     // ont le même score.
-    public ArrayList<Move> getNextMove() {
+    public Move getNextMove() {
         long startTime = System.currentTimeMillis();
         BEST_MOVES.clear();
-        int maxDepth = FIRST_MAX_DEPTH;
+        int maxDepth = 1;
         int bestScore;
+        int finalBestScore = Integer.MIN_VALUE;
         List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
         ExecutorService executor;
         List<Future<int[]>> futures;
 
+        /* TODO check if the new implementation of winScore - depth can eliminate this
         Move winningMove = possibleMoves.stream().filter(Move::isWinning).findAny().orElse(null);
         if (winningMove != null) {
-            BEST_MOVES.add(winningMove);
-            return BEST_MOVES;
+            return winningMove;
         }
+         */
 
-        while (System.currentTimeMillis() - startTime < MAX_TIME_MILLIS) {
+        timeLoop:
+        while (!isTimeExceeded(startTime)) {
             CURRENT_BEST_MOVES.clear();
             bestScore = Integer.MIN_VALUE;
-            possibleMoves = BOARD.getPossibleMoves(PLAYER);
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             futures = new ArrayList<>();
 
             for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
                 Move move = possibleMoves.get(moveIndex);
-                Board boardCopy = BOARD.clone();
-                boardCopy.play(move);
+                Board boardCopy = BOARD.clone(move);
 
                 final int idx = moveIndex;
                 int finalMaxDepth = maxDepth;
                 futures.add(executor.submit(() -> {
                     int score = alphaBeta(
-                            PLAYER.getOpponent(),
                             boardCopy,
                             false,
                             Integer.MIN_VALUE,
@@ -68,7 +69,6 @@ public class CPUPlayer {
 
             executor.shutdown();
 
-            boolean completed = true;
             for (Future<int[]> future : futures) {
                 try {
                     int[] result = future.get();
@@ -76,78 +76,87 @@ public class CPUPlayer {
                     int moveIndex = result[1];
                     Move move = possibleMoves.get(moveIndex);
 
-                    System.out.println("Move: " + move + ", Score: " + score + ", Depth: " + maxDepth);
+                    // TODO
+                    // System.out.println("\033[94;40mMove: " + move + ", Score: " + score + ", Depth: " + maxDepth);
 
-                    if (score == MAX_TIME_SCORE) {
-                        completed = false;
-                        break;
+                    if (score == Integer.MIN_VALUE) {
+                        // temps maximum écoulé
+                        break timeLoop;
                     }
 
                     if (score > bestScore) {
                         bestScore = score;
+                        finalBestScore = bestScore;
                         CURRENT_BEST_MOVES.clear();
                         CURRENT_BEST_MOVES.add(move);
                     } else if (score == bestScore) {
                         CURRENT_BEST_MOVES.add(move);
                     }
                 } catch (Exception e) {
-                    completed = false;
+                    System.out.println("\033[91;40m" + e.getMessage());
                     break;
                 }
             }
 
-            if (completed && !CURRENT_BEST_MOVES.isEmpty()) {
+            if (!CURRENT_BEST_MOVES.isEmpty()) {
                 BEST_MOVES.clear();
                 BEST_MOVES.addAll(CURRENT_BEST_MOVES);
-            } else {
-                break;
             }
 
             maxDepth++;
         }
 
         if (BEST_MOVES.isEmpty()) {
-            BEST_MOVES.add(possibleMoves.get(RANDOM.nextInt(possibleMoves.size())));
+            System.out.println("\033[91;40m!!! CRITICAL ERROR: No best moves found !!!");
+            BEST_MOVES.addAll(possibleMoves);
         }
 
-        return BEST_MOVES;
+        System.out.println("\033[32;40mBest moves found: " + BEST_MOVES + " with score: " + finalBestScore + " at depth: " + maxDepth);
+
+        Collections.shuffle(BEST_MOVES);
+        return BEST_MOVES.getFirst();
     }
 
-    private int alphaBeta(Player player, Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
-        if (System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS) {
-            return MAX_TIME_SCORE;
+    private int alphaBeta(Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
+        if (isTimeExceeded(startTime)) {
+            return Integer.MIN_VALUE;
         }
 
-        List<Move> possibleMoves = board.getPossibleMoves(player);
-        int score = board.evaluate(PLAYER);
+        int boardScore = board.evaluate(PLAYER);
+        // pour favoriser les coups gagnants on soustrait le depth
+        if (boardScore >= WIN_SCORE) {
+            return WIN_SCORE - currentDepth;
+        }
 
-        if (score >= WIN_SCORE || score <= LOSS_SCORE || possibleMoves.isEmpty() || currentDepth >= maxDepth) {
-            return score;
+        if (boardScore <= LOSS_SCORE) {
+            return LOSS_SCORE + currentDepth;
+        }
+
+        if (currentDepth >= maxDepth) {
+            return boardScore;
+        }
+
+        Player player = isMax ? PLAYER : PLAYER.getOpponent();
+        List<Move> possibleMoves = board.getPossibleMoves(player);
+
+        if (possibleMoves.isEmpty()) {
+            return player == PLAYER ? LOSS_SCORE : WIN_SCORE;
         }
 
         if (isMax) {
             int maxScore = Integer.MIN_VALUE;
 
             for (Move move : possibleMoves) {
-                if (System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS) {
-                    return MAX_TIME_SCORE;
-                }
-
                 board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
+                int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                if (value == MAX_TIME_SCORE) {
-                    return MAX_TIME_SCORE;
-                }
-
                 maxScore = Math.max(maxScore, value);
+                alpha = Math.max(alpha, maxScore);
 
-                if (maxScore >= beta) {
+                if (alpha >= beta) {
                     break;
                 }
-
-                alpha = Math.max(alpha, maxScore);
             }
 
             return maxScore;
@@ -155,27 +164,22 @@ public class CPUPlayer {
             int minScore = Integer.MAX_VALUE;
 
             for (Move move : possibleMoves) {
-                if (System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS) {
-                    return MAX_TIME_SCORE;
-                }
-
                 board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
+                int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                if (value == MAX_TIME_SCORE) {
-                    return MAX_TIME_SCORE;
-                }
-
                 minScore = Math.min(minScore, value);
+                beta = Math.min(beta, minScore);
 
-                if (minScore <= alpha) {
+                if (beta <= alpha) {
                     break;
                 }
-
-                beta = Math.min(beta, minScore);
             }
             return minScore;
         }
+    }
+
+    private boolean isTimeExceeded(long startTime) {
+        return System.currentTimeMillis() - startTime >= MAX_TIME_MILLIS;
     }
 }
