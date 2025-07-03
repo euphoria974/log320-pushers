@@ -2,14 +2,12 @@ package log320;
 
 import java.util.Comparator;
 
-import static log320.Helper.isExposed;
-
 public class MoveComparator implements Comparator<Move> {
-    final int[][] BOARD;
-    final Player PLAYER;
+    private final Board BOARD;
+    private final Player PLAYER;
 
     public MoveComparator(Board board, Player player) {
-        this.BOARD = board.getBoard();
+        this.BOARD = board;
         this.PLAYER = player;
     }
 
@@ -19,17 +17,12 @@ public class MoveComparator implements Comparator<Move> {
     }
 
     public int getMoveScore(Move move) {
-        int movedPiece = BOARD[move.getFromRow()][move.getFromCol()];
-        int destPiece = BOARD[move.getToRow()][move.getToCol()];
+        int destPiece = BOARD.get(move.getToRow(), move.getToCol());
 
         int score = 0;
 
-        if (move.getToCol() == PLAYER.getWinningCol()) {
-            if (movedPiece == PLAYER.getPusher()) {
-                return Integer.MAX_VALUE;
-            } else if (isPawnActive(move)) {
-                return Integer.MAX_VALUE;
-            }
+        if (move.isWinning()) {
+            return Integer.MAX_VALUE;
         }
 
         // Si tu peux manger un pusher adverse +20
@@ -39,31 +32,22 @@ public class MoveComparator implements Comparator<Move> {
 
         // Capture
         if (destPiece == PLAYER.getOpponent().getPusher()) {
-            if (movedPiece == PLAYER.getPusher()) {
-                score += 20;
-            } else if (BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher()) {
-                score += 20;
-            }
+            score += 20;
         } else if (destPiece == PLAYER.getOpponent().getPawn()) {
-            if (movedPiece == PLAYER.getPusher()) {
-                score += 8;
-            } else if (isPawnActive(move)) {
-                score += 8;
-            }
+            score += 8;
         }
 
         // Exposé
-        if (isExposed(BOARD, PLAYER, move.getToRow(), move.getToCol())) {
+        BOARD.play(move);
+        if (BOARD.isExposed(PLAYER, move.getToRow(), move.getToCol())) {
             score -= 95;
         }
+        BOARD.undo();
 
         // Près de la victoire
-        score += 6 * Math.abs(move.getToCol() - PLAYER.getWinningCol());
+        int distanceToWinningRow = Math.abs(move.getToRow() - PLAYER.getWinningRow());
+        score += 3 * (7 - distanceToWinningRow);
 
         return score;
-    }
-
-    private boolean isPawnActive(Move move) {
-        return BOARD[move.getFromRow() - (move.getToRow() - move.getFromRow())][move.getFromCol() - PLAYER.getForwardColumn()] == PLAYER.getPusher();
     }
 }

@@ -1,9 +1,6 @@
 package log320;
 
-import java.util.ArrayList;
-
 import static log320.Const.ALL_MOVES;
-import static log320.Const.RANDOM;
 
 public class Game {
     private final Board BOARD;
@@ -15,14 +12,9 @@ public class Game {
     }
 
     public Move getNextMove() {
-        ArrayList<Move> moves = CPU_PLAYER.getNextMove();
-        Move move = moves.get(RANDOM.nextInt(moves.size()));
+        Move move = CPU_PLAYER.getNextMove();
         BOARD.play(move);
         return move;
-    }
-
-    public void play(Move move) {
-        BOARD.play(move);
     }
 
     public void play(String moveString) {

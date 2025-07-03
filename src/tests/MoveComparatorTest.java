@@ -8,8 +8,8 @@ import java.util.List;
 public class MoveComparatorTest {
     public static void main(String[] args) {
         Board board = new Board();
-        board.place(0, 6, Player.RED.getPusher());
-        board.place(1, 3, Player.RED.getPusher());
+        board.set(0, 6, Player.RED.getPusher());
+        board.set(1, 3, Player.RED.getPusher());
         MoveComparator moveComparator = new MoveComparator(board, Player.RED);
 
         Move move1 = Const.ALL_MOVES.get("A7B8");
@@ -22,8 +22,7 @@ public class MoveComparatorTest {
 
         moves.sort(moveComparator);
         System.out.println("Sorted moves:");
-        for (int i = 0; i < moves.size(); i++) {
-            Move move = moves.get(i);
+        for (Move move : moves) {
             System.out.println(move + " with score: " + moveComparator.getMoveScore(move));
         }
     }

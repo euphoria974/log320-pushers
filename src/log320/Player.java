@@ -3,13 +3,13 @@ package log320;
 import static log320.Const.*;
 
 public enum Player {
-    RED(RED_PAWN, RED_PUSHER, RED_WINNING_COL, 1),
-    BLACK(BLACK_PAWN, BLACK_PUSHER, BLACK_WINNING_COL, -1);
+    RED(RED_PAWN, RED_PUSHER, RED_WINNING_ROW, 1),
+    BLACK(BLACK_PAWN, BLACK_PUSHER, BLACK_WINNING_ROW, -1);
 
     private final int PAWN;
     private final int PUSHER;
-    private final int WINNING_COL;
-    private final int FORWARD_COLUMN;
+    private final int WINNING_ROW;
+    private final int DIRECTION;
 
     private Player OPPONENT_PLAYER;
 
@@ -18,11 +18,11 @@ public enum Player {
         BLACK.OPPONENT_PLAYER = RED;
     }
 
-    Player(int pawn, int pusher, int winningCol, int forwardDirection) {
+    Player(int pawn, int pusher, int winningRow, int forwardDirection) {
         this.PAWN = pawn;
         this.PUSHER = pusher;
-        this.WINNING_COL = winningCol;
-        this.FORWARD_COLUMN = forwardDirection;
+        this.WINNING_ROW = winningRow;
+        this.DIRECTION = forwardDirection;
     }
 
     public int getPawn() {
@@ -37,11 +37,11 @@ public enum Player {
         return OPPONENT_PLAYER;
     }
 
-    public int getWinningCol() {
-        return WINNING_COL;
+    public int getWinningRow() {
+        return WINNING_ROW;
     }
 
-    public int getForwardColumn() {
-        return FORWARD_COLUMN;
+    public int getDirection() {
+        return DIRECTION;
     }
 }

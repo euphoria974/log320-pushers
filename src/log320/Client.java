@@ -19,7 +19,7 @@ class Client {
 
             while (true) {
                 char cmd = (char) input.read();
-                System.out.println("Commande serveur: " + cmd);
+                System.out.println("\033[93;40mCommande serveur: " + cmd);
 
                 // Debut de la partie en joueur rouge
                 if (cmd == '1') {
@@ -28,7 +28,7 @@ class Client {
                     input.read(aBuffer, 0, size);
                     game = new Game(new String(aBuffer).trim(), Player.RED);
 
-                    System.out.println("Nouvelle partie! Vous jouez rouge");
+                    System.out.println("\033[93;40mNouvelle partie! Vous jouez rouge");
 
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
@@ -37,7 +37,7 @@ class Client {
 
                 // Debut de la partie en joueur Noir
                 if (cmd == '2') {
-                    System.out.println("Nouvelle partie! Vous jouez noir");
+                    System.out.println("\033[93;40mNouvelle partie! Vous jouez noir");
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
@@ -56,8 +56,8 @@ class Client {
                     String m = s.replaceAll("[^A-Za-z0-9]", "");
                     game.play(m);
 
-                    System.out.println("Dernier coup :" + s);
-                    System.out.println("Votre tour");
+                    System.out.println("\033[93;40mDernier coup :" + s);
+                    System.out.println("\033[93;40mVotre tour");
 
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
@@ -67,7 +67,7 @@ class Client {
                 // Le dernier coup est invalide
                 if (cmd == '4') {
                     game.printBoard();
-                    System.out.println(game.getLastMove() + " est invalide, entrez un nouveau coup");
+                    System.out.println("\033[91;40m" + game.getLastMove() + " est invalide!! Entrez un nouveau coup");
 
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
@@ -80,7 +80,7 @@ class Client {
                     int size = input.available();
                     input.read(aBuffer, 0, size);
                     String s = new String(aBuffer);
-                    System.out.println("Partie Terminé. Le dernier coup joué est: " + s);
+                    System.out.println("\033[93;40mPartie Terminé. Le dernier coup joué est: " + s);
                     output.flush();
                     break;
                 }
