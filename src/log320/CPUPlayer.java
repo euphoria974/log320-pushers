@@ -54,7 +54,6 @@ public class CPUPlayer {
                 int finalMaxDepth = maxDepth;
                 futures.add(executor.submit(() -> {
                     int score = alphaBeta(
-                            PLAYER.getOpponent(),
                             boardCopy,
                             false,
                             Integer.MIN_VALUE,
@@ -116,7 +115,7 @@ public class CPUPlayer {
         return BEST_MOVES.getFirst();
     }
 
-    private int alphaBeta(Player player, Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
+    private int alphaBeta(Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
         if (isTimeExceeded(startTime)) {
             return Integer.MIN_VALUE;
         }
@@ -126,14 +125,19 @@ public class CPUPlayer {
             return boardScore;
         }
 
+        Player player = isMax ? PLAYER : PLAYER.getOpponent();
         List<Move> possibleMoves = board.getPossibleMoves(player);
+
+        if (possibleMoves.isEmpty()) {
+            return player == PLAYER ? LOSS_SCORE : WIN_SCORE;
+        }
 
         if (isMax) {
             int maxScore = Integer.MIN_VALUE;
 
             for (Move move : possibleMoves) {
                 board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
+                int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
                 maxScore = Math.max(maxScore, value);
@@ -150,7 +154,7 @@ public class CPUPlayer {
 
             for (Move move : possibleMoves) {
                 board.play(move);
-                int value = alphaBeta(player.getOpponent(), board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
+                int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
                 minScore = Math.min(minScore, value);

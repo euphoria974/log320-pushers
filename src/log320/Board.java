@@ -213,6 +213,7 @@ public class Board {
                 get(doubleForwardRow, col + 2) == player.getOpponent().getPusher();
     }
 
+    // TODO activé dans une direction particvulière
     public boolean isPawnActivated(Player player, int row, int col) {
         int backRow = row - player.getDirection();
 
