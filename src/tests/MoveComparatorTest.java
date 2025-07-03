@@ -1,6 +1,10 @@
 package tests;
 
-import log320.*;
+import log320.Const;
+import log320.entities.Move;
+import log320.entities.Player;
+import log320.game.Board;
+import log320.game.MoveComparator;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package log320;
+package log320.entities;
 
 public class UndoMoveState {
     int movedPiece, capturedPiece;

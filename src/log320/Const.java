@@ -1,5 +1,8 @@
 package log320;
 
+import log320.entities.Move;
+import log320.entities.Player;
+
 import java.util.HashMap;
 import java.util.Map;
 

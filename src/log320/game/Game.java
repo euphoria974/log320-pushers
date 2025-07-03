@@ -1,4 +1,7 @@
-package log320;
+package log320.game;
+
+import log320.entities.Move;
+import log320.entities.Player;
 
 import static log320.Const.ALL_MOVES;
 
@@ -6,7 +9,8 @@ public class Game {
     private Board board;
     private CPUPlayer cpuPlayer;
 
-    public Game() {}
+    public Game() {
+    }
 
     public void start(String boardState, Player currentPlayer) {
         this.board = new Board(boardState);

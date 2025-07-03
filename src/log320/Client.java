@@ -1,5 +1,9 @@
 package log320;
 
+import log320.entities.Player;
+import log320.game.Game;
+import log320.transposition.ZobristHash;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -9,8 +13,10 @@ import static log320.Const.ALL_MOVES;
 
 class Client {
     public static void main(String[] args) {
+        // Init new instances
         final Game game = new Game();
-        ALL_MOVES.get("A1A2"); // Initialize the static map of all possible moves
+        ALL_MOVES.get("A1A2");
+        ZobristHash.getTable();
 
         try {
             Socket client = new Socket("localhost", 8888);

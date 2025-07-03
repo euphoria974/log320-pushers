@@ -1,8 +1,8 @@
 package tests;
 
-import log320.Board;
-import log320.Move;
-import log320.Player;
+import log320.entities.Move;
+import log320.entities.Player;
+import log320.game.Board;
 
 import java.util.Collections;
 import java.util.List;

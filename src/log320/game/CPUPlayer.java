@@ -1,4 +1,10 @@
-package log320;
+package log320.game;
+
+import log320.entities.Move;
+import log320.entities.Player;
+import log320.transposition.NodeType;
+import log320.transposition.TranspositionTable;
+import log320.transposition.ZobristHash;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -129,6 +135,21 @@ public class CPUPlayer {
             return boardScore;
         }
 
+        long hash = ZobristHash.computeHash(BOARD);
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(hash);
+        if (entry != null && entry.depth >= maxDepth - currentDepth) {
+            switch (entry.type) {
+                case EXACT:
+                    return entry.score;
+                case ALPHA:
+                    if (entry.score <= alpha) return alpha;
+                    break;
+                case BETA:
+                    if (entry.score >= beta) return beta;
+                    break;
+            }
+        }
+
         Player player = isMax ? PLAYER : PLAYER.getOpponent();
         List<Move> possibleMoves = board.getPossibleMoves(player);
 
@@ -136,40 +157,60 @@ public class CPUPlayer {
             return player == PLAYER ? LOSS_SCORE : WIN_SCORE;
         }
 
-        if (isMax) {
-            int maxScore = Integer.MIN_VALUE;
+        Move bestMove = null;
+        if (entry != null && entry.bestMove != null) {
+            for (int i = 0; i < possibleMoves.size(); i++) {
+                if (possibleMoves.get(i).equals(entry.bestMove)) {
+                    bestMove = possibleMoves.remove(i);
+                    possibleMoves.addFirst(bestMove);
+                    break;
+                }
+            }
+        }
 
+        int originalAlpha = alpha;
+        int score = isMax ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+
+        if (isMax) {
             for (Move move : possibleMoves) {
                 board.play(move);
                 int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                maxScore = Math.max(maxScore, value);
-                alpha = Math.max(alpha, maxScore);
+                score = Math.max(score, value);
+                alpha = Math.max(alpha, score);
 
                 if (alpha >= beta) {
                     break;
                 }
             }
-
-            return maxScore;
         } else {
-            int minScore = Integer.MAX_VALUE;
-
             for (Move move : possibleMoves) {
                 board.play(move);
                 int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                minScore = Math.min(minScore, value);
-                beta = Math.min(beta, minScore);
+                score = Math.min(score, value);
+                beta = Math.min(beta, score);
 
                 if (beta <= alpha) {
                     break;
                 }
             }
-            return minScore;
         }
+
+        NodeType nodeType;
+        if (score <= originalAlpha) {
+            nodeType = NodeType.ALPHA;
+        } else if (score >= beta) {
+            nodeType = NodeType.BETA;
+        } else {
+            nodeType = NodeType.EXACT;
+        }
+
+        TRANSPOSITION_TABLE.put(hash, maxDepth - currentDepth, score, nodeType, bestMove);
+
+        return score;
     }
 
     private boolean isTimeExceeded(long startTime) {

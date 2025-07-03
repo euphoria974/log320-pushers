@@ -1,4 +1,4 @@
-package log320;
+package log320.entities;
 
 import static log320.Const.*;
 

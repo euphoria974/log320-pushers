@@ -1,7 +1,7 @@
 package tests;
 
-import log320.Board;
-import log320.Player;
+import log320.entities.Player;
+import log320.game.Board;
 
 public class BoardTest {
     public static void main(String[] args) {

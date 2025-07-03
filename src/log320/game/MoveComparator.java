@@ -1,4 +1,7 @@
-package log320;
+package log320.game;
+
+import log320.entities.Move;
+import log320.entities.Player;
 
 import java.util.Comparator;
 

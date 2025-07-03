@@ -1,6 +1,6 @@
 package tests;
 
-import log320.Board;
+import log320.game.Board;
 
 import static log320.Const.ALL_MOVES;
 

@@ -1,4 +1,8 @@
-package log320;
+package log320.game;
+
+import log320.entities.Move;
+import log320.entities.Player;
+import log320.entities.UndoMoveState;
 
 import java.util.ArrayList;
 import java.util.Arrays;

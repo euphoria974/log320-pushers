@@ -1,7 +1,7 @@
 package tests;
 
-import log320.Board;
-import log320.Player;
+import log320.entities.Player;
+import log320.game.Board;
 
 import java.io.IOException;
 import java.nio.file.Files;
