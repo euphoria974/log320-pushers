@@ -1,8 +1,8 @@
 package log320.entities;
 
 public class UndoMoveState {
-    int movedPiece, capturedPiece;
-    Move move;
+    public int movedPiece, capturedPiece;
+    public Move move;
 
     public UndoMoveState set(Move m, int mp, int cp) {
         move = m;

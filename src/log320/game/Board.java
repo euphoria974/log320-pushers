@@ -3,6 +3,7 @@ package log320.game;
 import log320.entities.Move;
 import log320.entities.Player;
 import log320.entities.UndoMoveState;
+import log320.transposition.ZobristHash;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,6 +22,7 @@ public class Board {
 
     private Move lastMove = null;
     private int moveStatePoolIndex = 0;
+    private long zobristHash = 0L;
 
     public Board() {
         for (int i = 0; i < 1000; i++) {
@@ -50,6 +52,8 @@ public class Board {
                 row--;
             }
         }
+
+        zobristHash = ZobristHash.computeHash(this);
     }
 
     public void init() {
@@ -61,10 +65,13 @@ public class Board {
             set(6, col, Player.BLACK.getPawn());
             set(7, col, Player.BLACK.getPusher());
         }
+
+        zobristHash = ZobristHash.computeHash(this);
     }
 
     public void clear() {
         Arrays.fill(BOARD, EMPTY);
+        zobristHash = 0L;
     }
 
     public void print() {
@@ -85,6 +92,7 @@ public class Board {
 
     public void set(int row, int col, int piece) {
         BOARD[row * 8 + col] = piece;
+        zobristHash ^= ZobristHash.getTable()[row][col][piece];
     }
 
     public void play(Move move) {
@@ -165,6 +173,7 @@ public class Board {
     public Board clone() {
         Board clone = new Board();
         System.arraycopy(this.BOARD, 0, clone.BOARD, 0, 64);
+        clone.zobristHash = this.zobristHash;
         return clone;
     }
 
@@ -172,6 +181,7 @@ public class Board {
     public Board clone(Move move) {
         Board clone = new Board();
         System.arraycopy(this.BOARD, 0, clone.BOARD, 0, 64);
+        clone.zobristHash = this.zobristHash;
         clone.play(move);
         return clone;
     }
@@ -225,7 +235,7 @@ public class Board {
                 get(doubleForwardRow, col + 2) == player.getOpponent().getPusher();
     }
 
-    // TODO activé dans une direction particvulière
+    // TODO activé dans une direction particulière?
     public boolean isPawnActivated(Player player, int row, int col) {
         int backRow = row - player.getDirection();
 
@@ -236,5 +246,25 @@ public class Board {
         return (col > 0 && get(backRow, col - 1) == player.getPusher()) ||
                 get(backRow, col) == player.getPusher() ||
                 (col < 7 && get(backRow, col + 1) == player.getPusher());
+    }
+
+    public long getHash() {
+        return zobristHash;
+    }
+
+    public boolean canEat(Player player, int piece, int row, int col) {
+        int rowToCheck = row + player.getDirection();
+
+        if (rowToCheck < 0 || rowToCheck > 7) {
+            return false;
+        }
+
+        int leftColToCheck = col - 1;
+        if (leftColToCheck >= 0 && get(rowToCheck, leftColToCheck) == piece) {
+            return true;
+        }
+
+        int rightColToCheck = col + 1;
+        return rightColToCheck < 8 && get(rowToCheck, rightColToCheck) == piece;
     }
 }

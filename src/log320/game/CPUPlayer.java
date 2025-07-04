@@ -4,7 +4,6 @@ import log320.entities.Move;
 import log320.entities.Player;
 import log320.transposition.NodeType;
 import log320.transposition.TranspositionTable;
-import log320.transposition.ZobristHash;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +19,7 @@ public class CPUPlayer {
     private final Player PLAYER;
     private final ArrayList<Move> BEST_MOVES = new ArrayList<>(20);
     private final ArrayList<Move> CURRENT_BEST_MOVES = new ArrayList<>(20);
+    private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
     public CPUPlayer(Board board, Player player) {
         this.BOARD = board;
@@ -38,6 +38,8 @@ public class CPUPlayer {
         List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
         ExecutorService executor;
         List<Future<int[]>> futures;
+
+        TRANSPOSITION_TABLE.newGeneration();
 
         timeLoop:
         while (!isTimeExceeded(startTime)) {
@@ -74,9 +76,6 @@ public class CPUPlayer {
                     int score = result[0];
                     int moveIndex = result[1];
                     Move move = possibleMoves.get(moveIndex);
-
-                    // TODO
-                    // System.out.println("\033[94;40mMove: " + move + ", Score: " + score + ", Depth: " + maxDepth);
 
                     if (score == Integer.MIN_VALUE) {
                         // temps maximum écoulé
@@ -135,8 +134,7 @@ public class CPUPlayer {
             return boardScore;
         }
 
-        long hash = ZobristHash.computeHash(BOARD);
-        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(hash);
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
         if (entry != null && entry.depth >= maxDepth - currentDepth) {
             switch (entry.type) {
                 case EXACT:
@@ -208,7 +206,7 @@ public class CPUPlayer {
             nodeType = NodeType.EXACT;
         }
 
-        TRANSPOSITION_TABLE.put(hash, maxDepth - currentDepth, score, nodeType, bestMove);
+        TRANSPOSITION_TABLE.put(board.getHash(), maxDepth - currentDepth, score, nodeType, bestMove);
 
         return score;
     }
