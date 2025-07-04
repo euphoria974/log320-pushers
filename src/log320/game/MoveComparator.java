@@ -24,32 +24,39 @@ public class MoveComparator implements Comparator<Move> {
 
         int score = 0;
 
+        // Victoire
         if (move.isWinning()) {
             return Integer.MAX_VALUE;
         }
 
-        // Si tu peux manger un pusher adverse +20
-        // Si tu peux manger un pion adverse +8
-        // Si t'es pas safe après le coup -95
-        // Si t'es proche de la victoire +6/colonne
-
         // Capture
         if (destPiece == PLAYER.getOpponent().getPusher()) {
-            score += 30;
+            score += 1000;
         } else if (destPiece == PLAYER.getOpponent().getPawn()) {
-            score += 8;
+            score += 300;
         }
 
         // Exposé
         BOARD.play(move);
         if (BOARD.isExposed(PLAYER, move.getToRow(), move.getToCol())) {
-            score -= 95;
+            score -= 10000;
         }
         BOARD.undo();
 
         // Près de la victoire
         int distanceToWinningRow = Math.abs(move.getToRow() - PLAYER.getWinningRow());
-        score += 3 * (7 - distanceToWinningRow);
+        score += 10 * (7 - distanceToWinningRow);
+
+        // pushers alignés
+        if (move.getToRow() < 7 && move.getToRow() > 0) {
+            if (BOARD.get(move.getToRow() + PLAYER.getDirection(), move.getToCol()) == PLAYER.getPusher()) {
+                score += 100;
+            }
+
+            if (BOARD.get(move.getToRow() + PLAYER.getDirection(), move.getToCol()) == PLAYER.getOpponent().getPusher()) {
+                score += 150;
+            }
+        }
 
         return score;
     }

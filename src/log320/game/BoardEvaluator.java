@@ -12,18 +12,18 @@ public class BoardEvaluator {
 
     private final int pusherScore = 25;
     private final int pawnScore = 10;
-    private final int capturePusherScore = 150;
+    private final int capturePusherScore = 350;
     private final int capturePawnScore = 30;
-    private final int exposedPusherScore = -500;
-    private final int exposedPawnScore = -50;
+    private final int exposedPusherScore = -1200;
+    private final int exposedPawnScore = -200;
     private final int faceToFacePusherScore = 200;
     private final int pusherDistanceToWinningRowScore = 10;
     private final int pawnDistanceToWinningRowScore = 8;
     private final int pushersDifferenceScore = 100;
     private final int movesDifferenceScore = 3;
-    private final int firstRowProtectionScore = 900;
-    private final int secondRowProtectionScore = 700;
-    private final int thirdRowProtectionScore = 350;
+    private final int firstRowProtectionScore = 750;
+    private final int secondRowProtectionScore = 550;
+    private final int thirdRowProtectionScore = 275;
 
     public BoardEvaluator(Board board) {
         this.BOARD = board;

@@ -85,9 +85,14 @@ class Client {
                     byte[] aBuffer = new byte[16];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
+
                     String s = new String(aBuffer);
+                    String m = s.replaceAll("[^A-Za-z0-9]", "");
+                    game.play(m);
+
                     System.out.println("\033[93;40mPartie Terminé. Le dernier coup joué est: " + s);
                     output.flush();
+                    game.over();
                     break;
                 }
             }
