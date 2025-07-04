@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static log320.Const.ALL_MOVES;
+import static log320.Const.WIN_SCORE;
 
 public class Game {
     private final List<Move> PLAYED_MOVES = new ArrayList<>();
@@ -36,11 +37,11 @@ public class Game {
     }
 
     public void over() {
-        /*if (board.evaluate(currentPlayer) == WIN_SCORE) {
+        if (board.evaluate(currentPlayer) == WIN_SCORE) {
             return;
-        }*/
+        }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("data/" + UUID.randomUUID() + ".txt"))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("data/" + currentPlayer.name() + "-" + UUID.randomUUID() + ".txt"))) {
             for (Move move : PLAYED_MOVES) {
                 writer.write(move.toString());
                 writer.newLine();
