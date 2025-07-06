@@ -62,7 +62,8 @@ public class Game {
         Move move = ALL_MOVES.get(moveString);
         board.play(move);
 
-        if (PLAYED_MOVES.getLast() == null || !PLAYED_MOVES.getLast().toString().equals(move.toString())) {
+        Move lastMove = !PLAYED_MOVES.isEmpty() ? PLAYED_MOVES.getLast() : null;
+        if (lastMove == null || !lastMove.toString().equals(move.toString())) {
             PLAYED_MOVES.add(move);
         }
     }

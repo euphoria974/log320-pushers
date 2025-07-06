@@ -19,6 +19,7 @@ public class MoveComparator implements Comparator<Move> {
         return Integer.compare(getMoveScore(m2), getMoveScore(m1));
     }
 
+    // TODO mettre les 4 pions qui protègent la première ligne à la fin
     public int getMoveScore(Move move) {
         int destPiece = BOARD.get(move.getToRow(), move.getToCol());
 

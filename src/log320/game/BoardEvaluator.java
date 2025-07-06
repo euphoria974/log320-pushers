@@ -14,7 +14,7 @@ public class BoardEvaluator {
     private final int pawnScore = 10;
     private final int capturePusherScore = 350;
     private final int capturePawnScore = 30;
-    private final int exposedPusherScore = -1200;
+    private final int exposedPusherScore = -1500;
     private final int exposedPawnScore = -200;
     private final int faceToFacePusherScore = 200;
     private final int pusherDistanceToWinningRowScore = 10;
