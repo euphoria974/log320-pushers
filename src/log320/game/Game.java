@@ -68,6 +68,10 @@ public class Game {
         }
     }
 
+    public void undo() {
+        board.undo();
+    }
+
     public void printBoard() {
         board.print();
     }

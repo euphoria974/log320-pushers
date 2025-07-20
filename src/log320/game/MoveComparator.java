@@ -19,16 +19,26 @@ public class MoveComparator implements Comparator<Move> {
         return Integer.compare(getMoveScore(m2), getMoveScore(m1));
     }
 
-    // TODO mettre les 4 pions qui protègent la première ligne à la fin
     public int getMoveScore(Move move) {
-        int destPiece = BOARD.get(move.getToRow(), move.getToCol());
-
-        int score = 0;
-
         // Victoire
         if (move.isWinning()) {
             return Integer.MAX_VALUE;
         }
+
+        int toIndex = move.getTo();
+        int fromIndex = move.getFrom();
+        int toRow = toIndex / 8;
+        int toCol = toIndex % 8;
+        int fromRow = fromIndex / 8;
+        int fromCol = fromIndex % 8;
+
+        // protection de la ligne gagnante
+        if (fromRow == PLAYER.getOpponent().getWinningRow() && (fromCol == 1 || fromCol == 2 || fromCol == 5 || fromCol == 6)) {
+            return Integer.MIN_VALUE;
+        }
+
+        int destPiece = BOARD.get(toIndex);
+        int score = 0;
 
         // Capture
         if (destPiece == PLAYER.getOpponent().getPusher()) {
@@ -37,26 +47,26 @@ public class MoveComparator implements Comparator<Move> {
             score += 300;
         }
 
-        // Exposé
-        BOARD.play(move);
-        if (BOARD.isExposed(PLAYER, move.getToRow(), move.getToCol())) {
+        // exposé
+        if (BOARD.isExposed(PLAYER, toRow, toCol)) {
             score -= 10000;
         }
-        BOARD.undo();
 
         // Près de la victoire
-        int distanceToWinningRow = Math.abs(move.getToRow() - PLAYER.getWinningRow());
+        int distanceToWinningRow = Math.abs(toRow - PLAYER.getWinningRow());
         score += 10 * (7 - distanceToWinningRow);
 
         // pushers alignés
-        if (move.getToRow() < 7 && move.getToRow() > 0) {
-            if (BOARD.get(move.getToRow() + PLAYER.getDirection(), move.getToCol()) == PLAYER.getPusher()) {
+        if (toRow < 7 && toRow > 0) {
+            int checkIndex = toIndex + (PLAYER.getDirection() * 8);
+            if (BOARD.hasPusherAt(checkIndex)) {
                 score += 100;
             }
+        }
 
-            if (BOARD.get(move.getToRow() + PLAYER.getDirection(), move.getToCol()) == PLAYER.getOpponent().getPusher()) {
-                score += 150;
-            }
+        // bonus centre (mobilité)
+        if (fromCol > 1 && fromCol < 6) {
+            score += 50;
         }
 
         return score;

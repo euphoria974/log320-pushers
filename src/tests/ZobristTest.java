@@ -1,8 +1,9 @@
 package tests;
 
-import log320.entities.Player;
 import log320.game.Board;
 import log320.transposition.ZobristHash;
+
+import static log320.Const.BLACK_PUSHER;
 
 public class ZobristTest {
     public static void main(String[] args) {
@@ -13,11 +14,11 @@ public class ZobristTest {
 
         System.out.println("Zobrist Hash: " + hash);
 
-        hash ^= ZobristHash.getTable()[0][0][Player.BLACK.getPusher()];
+        hash ^= ZobristHash.getHashForPosition(0, 0, BLACK_PUSHER);
 
         System.out.println("Zobrist Hash: " + hash);
 
-        hash ^= ZobristHash.getTable()[0][0][Player.BLACK.getPusher()];
+        hash ^= ZobristHash.getHashForPosition(0, 0, BLACK_PUSHER);
 
         System.out.println("Zobrist Hash: " + hash);
     }

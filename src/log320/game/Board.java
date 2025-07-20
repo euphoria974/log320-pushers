@@ -13,12 +13,19 @@ import java.util.Stack;
 import static log320.Const.*;
 
 public class Board {
-    private final int[] BOARD = new int[64];
+    private static final long MASK_COL_A = 0x0101010101010101L;
+    private static final long MASK_COL_H = 0x8080808080808080L;
+
     private final MoveComparator MOVE_COMPARATOR_RED = new MoveComparator(this, Player.RED);
     private final MoveComparator MOVE_COMPARATOR_BLACK = new MoveComparator(this, Player.BLACK);
-    private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
     private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>(1000);
+    private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
     private final BoardEvaluator EVALUATOR = new BoardEvaluator(this);
+
+    private long redPushers = 0L;
+    private long redPawns = 0L;
+    private long blackPushers = 0L;
+    private long blackPawns = 0L;
 
     private Move lastMove = null;
     private int moveStatePoolIndex = 0;
@@ -33,10 +40,6 @@ public class Board {
     public Board(String s) {
         this();
         build(s);
-    }
-
-    public Move getLastMove() {
-        return lastMove;
     }
 
     public void build(String s) {
@@ -57,161 +60,46 @@ public class Board {
     }
 
     public void init() {
-        clear();
-
-        for (int col = 0; col < 8; col++) {
-            set(0, col, Player.RED.getPusher());
-            set(1, col, Player.RED.getPawn());
-            set(6, col, Player.BLACK.getPawn());
-            set(7, col, Player.BLACK.getPusher());
-        }
+        redPushers = 0x00000000000000FFL;
+        redPawns = 0x000000000000FF00L;
+        blackPushers = 0xFF00000000000000L;
+        blackPawns = 0x00FF000000000000L;
 
         zobristHash = ZobristHash.computeHash(this);
     }
 
     public void clear() {
-        Arrays.fill(BOARD, EMPTY);
+        redPushers = 0L;
+        redPawns = 0L;
+        blackPushers = 0L;
+        blackPawns = 0L;
+
         zobristHash = 0L;
     }
 
     public void print() {
-        // les rangées sont stockées de bas en haut, donc l'impression se fait à l'envers
-        for (int row = 7; row >= 0; --row) {
-            for (int col = 0; col < 8; ++col) {
-                System.out.print(get(row, col) + " ");
+        char[] board = new char[64];
+        Arrays.fill(board, 'x');
+
+        for (int i = 0; i < 64; i++) {
+            long bit = 1L << i;
+            if ((redPushers & bit) != 0) board[i] = 'R';
+            if ((redPawns & bit) != 0) board[i] = 'r';
+            if ((blackPushers & bit) != 0) board[i] = 'B';
+            if ((blackPawns & bit) != 0) board[i] = 'b';
+        }
+
+        for (int row = 7; row >= 0; row--) {
+            for (int col = 0; col < 8; col++) {
+                System.out.print(board[row * 8 + col] + " ");
             }
 
             System.out.println();
         }
+
         System.out.println("==========================");
     }
 
-    public int get(int row, int col) {
-        return BOARD[row * 8 + col];
-    }
-
-    public void set(int row, int col, int piece) {
-        BOARD[row * 8 + col] = piece;
-        zobristHash ^= ZobristHash.getTable()[row][col][piece];
-    }
-
-    public void play(Move move) {
-        lastMove = move;
-
-        int movedPiece = get(move.getFromRow(), move.getFromCol());
-        int capturedPiece = get(move.getToRow(), move.getToCol());
-
-        UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
-        MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece));
-
-        set(move.getFromRow(), move.getFromCol(), EMPTY);
-        set(move.getToRow(), move.getToCol(), movedPiece);
-    }
-
-    public void undo() {
-        if (MOVE_STACK.isEmpty()) return;
-        UndoMoveState ms = MOVE_STACK.pop();
-        set(ms.move.getToRow(), ms.move.getToCol(), ms.capturedPiece);
-        set(ms.move.getFromRow(), ms.move.getFromCol(), ms.movedPiece);
-        moveStatePoolIndex--;
-    }
-
-    public int evaluate(Player player) {
-        return EVALUATOR.evaluate(player);
-    }
-
-    public ArrayList<Move> getPossibleMoves(Player player) {
-        ArrayList<Move> possibleMoves = new ArrayList<>(32);
-        StringBuilder sb = new StringBuilder(4);
-
-        for (int row = 0; row < 8; row++) {
-            for (int col = 0; col < 8; col++) {
-                if (get(row, col) == player.getPawn()) {
-                    if (col > 0 && col < 7 && get(row - player.getDirection(), col + 1) == player.getPusher() && (get(row + player.getDirection(), col - 1) == EMPTY || get(row + player.getDirection(), col - 1) == player.getOpponent().getPawn() || get(row + player.getDirection(), col - 1) == player.getOpponent().getPusher())) {
-                        sb.setLength(0);
-                        sb.append((char) (col + COL_CHAR_OFFSET)).append(row + 1).append((char) (col + COL_CHAR_OFFSET - 1)).append(row + 1 + player.getDirection());
-                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
-                    }
-
-                    if (get(row + player.getDirection(), col) == EMPTY && get(row - player.getDirection(), col) == player.getPusher()) {
-                        sb.setLength(0);
-                        sb.append((char) (col + COL_CHAR_OFFSET)).append(row + 1).append((char) (col + COL_CHAR_OFFSET)).append(row + 1 + player.getDirection());
-                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
-                    }
-
-                    if (col > 0 && col < 7 && get(row - player.getDirection(), col - 1) == player.getPusher() && (get(row + player.getDirection(), col + 1) == EMPTY || get(row + player.getDirection(), col + 1) == player.getOpponent().getPawn() || get(row + player.getDirection(), col + 1) == player.getOpponent().getPusher())) {
-                        sb.setLength(0);
-                        sb.append((char) (col + COL_CHAR_OFFSET)).append(row + 1).append((char) (col + COL_CHAR_OFFSET + 1)).append(row + 1 + player.getDirection());
-                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
-                    }
-                } else if (get(row, col) == player.getPusher()) {
-                    if (col > 0 && (get(row + player.getDirection(), col - 1) == EMPTY || get(row + player.getDirection(), col - 1) == player.getOpponent().getPawn() || get(row + player.getDirection(), col - 1) == player.getOpponent().getPusher())) {
-                        sb.setLength(0);
-                        sb.append((char) (col + COL_CHAR_OFFSET)).append(row + 1).append((char) (col + COL_CHAR_OFFSET - 1)).append(row + 1 + player.getDirection());
-                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
-                    }
-
-                    if (get(row + player.getDirection(), col) == EMPTY) {
-                        sb.setLength(0);
-                        sb.append((char) (col + COL_CHAR_OFFSET)).append(row + 1).append((char) (col + COL_CHAR_OFFSET)).append(row + 1 + player.getDirection());
-                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
-                    }
-
-                    if (col < 7 && (get(row + player.getDirection(), col + 1) == EMPTY || get(row + player.getDirection(), col + 1) == player.getOpponent().getPawn() || get(row + player.getDirection(), col + 1) == player.getOpponent().getPusher())) {
-                        sb.setLength(0);
-                        sb.append((char) (col + COL_CHAR_OFFSET)).append(row + 1).append((char) (col + COL_CHAR_OFFSET + 1)).append(row + 1 + player.getDirection());
-                        possibleMoves.add(ALL_MOVES.get(sb.toString()));
-                    }
-                }
-            }
-        }
-
-        possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
-        return possibleMoves;
-    }
-
-    public Board clone() {
-        Board clone = new Board();
-        System.arraycopy(this.BOARD, 0, clone.BOARD, 0, 64);
-        clone.zobristHash = this.zobristHash;
-        return clone;
-    }
-
-    // permet de cloner et joeur un moe
-    public Board clone(Move move) {
-        Board clone = new Board();
-        System.arraycopy(this.BOARD, 0, clone.BOARD, 0, 64);
-        clone.zobristHash = this.zobristHash;
-        clone.play(move);
-        return clone;
-    }
-
-    public boolean isRowCovered(Player player, int row) {
-        Boolean[] covered = new Boolean[8];
-        Arrays.fill(covered, false);
-
-        for (int col = 0; col < 8; col++) {
-            if (get(row - player.getDirection(), col) == player.getPusher()) {
-                if (col > 0) {
-                    covered[col - 1] = true;
-                }
-
-                if (col < 7) {
-                    covered[col + 1] = true;
-                }
-            } else if (col > 0 && col < 7 && get(row - player.getDirection(), col) == player.getPawn()) {
-                if (get(row - player.getDirection() - player.getDirection(), col - 1) == player.getPusher()) {
-                    covered[col + 1] = true;
-                }
-
-                if (get(row - player.getDirection() - player.getDirection(), col + 1) == player.getPusher()) {
-                    covered[col - 1] = true;
-                }
-            }
-        }
-
-        return Arrays.stream(covered).allMatch(c -> c);
-    }
 
     public boolean isExposed(Player player, int row, int col) {
         int forwardRow = row + player.getDirection();
@@ -221,21 +109,286 @@ public class Board {
             return false;
         }
 
-        if ((col > 0 && get(forwardRow, col - 1) == player.getOpponent().getPusher()) ||
-                (col < 7 && get(forwardRow, col + 1) == player.getOpponent().getPusher())) {
-            return true;
-        } else if (col > 1 && doubleForwardRow >= 0 && doubleForwardRow < 8 &&
-                get(forwardRow, col - 1) == player.getOpponent().getPawn() &&
-                get(doubleForwardRow, col - 2) == player.getOpponent().getPusher()) {
-            return true;
+        // Convert positions to indices
+        int forwardIndex = forwardRow * 8 + col;
+        int doubleForwardIndex = doubleForwardRow * 8 + col;
+
+        // Get opponent pieces
+        long opponentPushers = player == Player.RED ? blackPushers : redPushers;
+        long opponentPawns = player == Player.RED ? blackPawns : redPawns;
+
+        // Check for opponent pushers at forward diagonal positions
+        if (col > 0) {
+            long leftDiagBit = 1L << (forwardIndex - 1);
+            if ((opponentPushers & leftDiagBit) != 0) {
+                return true;
+            }
         }
 
-        return col < 6 && doubleForwardRow >= 0 && doubleForwardRow < 8 &&
-                get(forwardRow, col + 1) == player.getOpponent().getPawn() &&
-                get(doubleForwardRow, col + 2) == player.getOpponent().getPusher();
+        if (col < 7) {
+            long rightDiagBit = 1L << (forwardIndex + 1);
+            if ((opponentPushers & rightDiagBit) != 0) {
+                return true;
+            }
+        }
+
+        // Check for opponent pawns with pushers behind them (left diagonal)
+        if (col > 1 && doubleForwardRow >= 0 && doubleForwardRow < 8) {
+            long leftPawnBit = 1L << (forwardIndex - 1);
+            long leftPusherBit = 1L << (doubleForwardIndex - 2);
+            if ((opponentPawns & leftPawnBit) != 0 && (opponentPushers & leftPusherBit) != 0) {
+                return true;
+            }
+        }
+
+        // Check for opponent pawns with pushers behind them (right diagonal)
+        if (col < 6 && doubleForwardRow >= 0 && doubleForwardRow < 8) {
+            long rightPawnBit = 1L << (forwardIndex + 1);
+            long rightPusherBit = 1L << (doubleForwardIndex + 2);
+            if ((opponentPawns & rightPawnBit) != 0 && (opponentPushers & rightPusherBit) != 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    // TODO activé dans une direction particulière?
+    public Board clone() {
+        Board clone = new Board();
+        clone.redPushers = this.redPushers;
+        clone.redPawns = this.redPawns;
+        clone.blackPushers = this.blackPushers;
+        clone.blackPawns = this.blackPawns;
+        clone.zobristHash = this.zobristHash;
+        return clone;
+    }
+
+    // permet de cloner et joeur un move
+    public Board clone(Move move) {
+        Board clone = clone();
+        clone.play(move);
+        return clone;
+    }
+
+    public void play(Move move) {
+        lastMove = move;
+
+        // Convert indices to row/col for compatibility
+        int fromRow = move.getFrom() / 8;
+        int fromCol = move.getFrom() % 8;
+        int toRow = move.getTo() / 8;
+        int toCol = move.getTo() % 8;
+
+        // Determine which piece is being moved
+        long fromBit = 1L << move.getFrom();
+        long toBit = 1L << move.getTo();
+
+        int movedPiece = EMPTY;
+        int capturedPiece = EMPTY;
+
+        // Find the moved piece
+        if ((redPushers & fromBit) != 0) {
+            movedPiece = RED_PUSHER;
+            redPushers &= ~fromBit; // Remove from source
+        } else if ((redPawns & fromBit) != 0) {
+            movedPiece = RED_PAWN;
+            redPawns &= ~fromBit; // Remove from source
+        } else if ((blackPushers & fromBit) != 0) {
+            movedPiece = BLACK_PUSHER;
+            blackPushers &= ~fromBit; // Remove from source
+        } else if ((blackPawns & fromBit) != 0) {
+            movedPiece = BLACK_PAWN;
+            blackPawns &= ~fromBit; // Remove from source
+        }
+
+        // Find the captured piece (if any)
+        if ((redPushers & toBit) != 0) {
+            capturedPiece = RED_PUSHER;
+            redPushers &= ~toBit;
+        } else if ((redPawns & toBit) != 0) {
+            capturedPiece = RED_PAWN;
+            redPawns &= ~toBit;
+        } else if ((blackPushers & toBit) != 0) {
+            capturedPiece = BLACK_PUSHER;
+            blackPushers &= ~toBit;
+        } else if ((blackPawns & toBit) != 0) {
+            capturedPiece = BLACK_PAWN;
+            blackPawns &= ~toBit;
+        }
+
+        UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
+        MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece));
+
+        if (movedPiece == RED_PUSHER) {
+            redPushers |= toBit;
+        } else if (movedPiece == RED_PAWN) {
+            redPawns |= toBit;
+        } else if (movedPiece == BLACK_PUSHER) {
+            blackPushers |= toBit;
+        } else if (movedPiece == BLACK_PAWN) {
+            blackPawns |= toBit;
+        }
+
+        zobristHash = ZobristHash.updateHash(zobristHash, fromRow, fromCol, movedPiece, toRow, toCol, capturedPiece);
+    }
+
+    public void undo() {
+        if (MOVE_STACK.isEmpty()) return;
+        UndoMoveState ms = MOVE_STACK.pop();
+
+        // Convert BitMove indices to row/col for Zobrist hash updates
+        int fromRow = ms.move.getFrom() / 8;
+        int fromCol = ms.move.getFrom() % 8;
+        int toRow = ms.move.getTo() / 8;
+        int toCol = ms.move.getTo() % 8;
+
+        // Bit masks for the positions
+        long fromBit = 1L << ms.move.getFrom();
+        long toBit = 1L << ms.move.getTo();
+
+        // Remove the moved piece from destination
+        if (ms.movedPiece == RED_PUSHER) {
+            redPushers &= ~toBit;
+        } else if (ms.movedPiece == RED_PAWN) {
+            redPawns &= ~toBit;
+        } else if (ms.movedPiece == BLACK_PUSHER) {
+            blackPushers &= ~toBit;
+        } else if (ms.movedPiece == BLACK_PAWN) {
+            blackPawns &= ~toBit;
+        }
+
+        // Restore the captured piece at destination (if any)
+        if (ms.capturedPiece == RED_PUSHER) {
+            redPushers |= toBit;
+        } else if (ms.capturedPiece == RED_PAWN) {
+            redPawns |= toBit;
+        } else if (ms.capturedPiece == BLACK_PUSHER) {
+            blackPushers |= toBit;
+        } else if (ms.capturedPiece == BLACK_PAWN) {
+            blackPawns |= toBit;
+        }
+
+        // Restore the moved piece at source
+        if (ms.movedPiece == RED_PUSHER) {
+            redPushers |= fromBit;
+        } else if (ms.movedPiece == RED_PAWN) {
+            redPawns |= fromBit;
+        } else if (ms.movedPiece == BLACK_PUSHER) {
+            blackPushers |= fromBit;
+        } else if (ms.movedPiece == BLACK_PAWN) {
+            blackPawns |= fromBit;
+        }
+
+        zobristHash = ZobristHash.updateHash(zobristHash, toRow, toCol, ms.movedPiece, fromRow, fromCol, ms.capturedPiece);
+
+        moveStatePoolIndex--;
+    }
+
+    public int evaluate(Player player) {
+        int playerScore = EVALUATOR.evaluate(player);
+
+        if (playerScore == WIN_SCORE || playerScore == LOSS_SCORE)
+            return playerScore;
+
+        return playerScore - EVALUATOR.evaluate(player.getOpponent());
+    }
+
+    public ArrayList<Move> getSortedPossibleMoves(Player player) {
+        ArrayList<Move> possibleMoves = getPossibleMoves(player);
+        possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
+        return possibleMoves;
+    }
+
+    public ArrayList<Move> getPossibleMoves(Player player) {
+        ArrayList<Move> possibleMoves = new ArrayList<>(32);
+
+        long occ = occupied();
+        long blackPieces = allBlacks();
+        long redPieces = allReds();
+
+        if (player == Player.RED) {
+            // Pushers
+            // up << 8
+            long pusherForward = (redPushers << 8) & ~occ;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherForward, 8));
+
+            // diaognal gauche << 7
+            long pusherDiagLeft = ((redPushers & ~MASK_COL_A) << 7) & ~redPieces;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagLeft, 7));
+
+            // diaognal droite << 9
+            long pusherDiagRight = ((redPushers & ~MASK_COL_H) << 9) & ~redPieces;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagRight, 9));
+
+            // Pions
+            // up << 8
+            long forwardPawns = redPawns & (redPushers << 8);
+            long forwardTo = (forwardPawns << 8) & ~occ;
+            possibleMoves.addAll(generateMovesFromBitboard(forwardTo, 8));
+
+            // diaognal gauche << 7
+            long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
+            long diagLeftTo = (diagLeftPawns << 7) & ~occ & ~MASK_COL_H;
+            possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, 7));
+
+            // diaognal droite << 9
+            long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
+            long diagRightTo = (diagRightPawns << 9) & ~occ & ~MASK_COL_A;
+            possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, 9));
+        } else {
+            // down >> 8
+            long pusherForward = (blackPushers >> 8) & ~occ & ~(0xFFL << 56);
+            possibleMoves.addAll(generateMovesFromBitboard(pusherForward, -8));
+
+            // diagonal droite >> 7
+            long pusherDiagRight = ((blackPushers & ~MASK_COL_H) >> 7) & ~blackPieces;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagRight, -7));
+
+            // diagonal gauche >> 9
+            long pusherDiagLeft = ((blackPushers & ~MASK_COL_A) >> 9) & ~blackPieces & 0x007F7F7F7F7F7F7FL;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagLeft, -9));
+
+            // Pions
+            // up >> 8
+            long forwardPawns = blackPawns & (blackPushers >> 8); // pushers directly behind
+            long forwardTo = (forwardPawns >> 8) & ~occ; // destination must be empty
+            possibleMoves.addAll(generateMovesFromBitboard(forwardTo, -8));
+
+            // diaognal gauche >> 7
+            long diagLeftPawns = (blackPawns & ~MASK_COL_A) & ((blackPushers & ~MASK_COL_H) >> 7);
+            long diagLeftTo = (diagLeftPawns >> 7) & ~blackPieces & ~MASK_COL_A;
+            possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, -7));
+
+            // diaognal droite >> 9
+            long diagRightPawns = (blackPawns & ~MASK_COL_H) & ((blackPushers & ~MASK_COL_A) >> 9);
+            long diagRightTo = (diagRightPawns >> 9) & ~blackPieces & ~MASK_COL_H;
+            possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, -9));
+        }
+
+        return possibleMoves;
+    }
+
+    private ArrayList<Move> generateMovesFromBitboard(long toBits, int shift) {
+        ArrayList<Move> moves = new ArrayList<>();
+
+        while (toBits != 0) {
+            int toIndex = Long.numberOfTrailingZeros(toBits);
+            int fromIndex = toIndex - shift;
+            moves.add(ALL_MOVES.get(Move.toString(fromIndex, toIndex)));
+            toBits &= toBits - 1;
+        }
+
+        return moves;
+    }
+
+    public boolean hasPlayerWon(Player player) {
+        if (player == Player.RED) {
+            return (redPushers & 0xFF00000000000000L) != 0 || blackPushers == 0L;
+        } else {
+            return (blackPushers & 0x00000000000000FFL) != 0 || redPushers == 0L;
+        }
+    }
+
     public boolean isPawnActivated(Player player, int row, int col) {
         int backRow = row - player.getDirection();
 
@@ -243,13 +396,91 @@ public class Board {
             return false;
         }
 
-        return (col > 0 && get(backRow, col - 1) == player.getPusher()) ||
-                get(backRow, col) == player.getPusher() ||
-                (col < 7 && get(backRow, col + 1) == player.getPusher());
+        long playerPushers = player == Player.RED ? redPushers : blackPushers;
+
+        // Check for pusher directly behind
+        long behindBit = 1L << (backRow * 8 + col);
+        if ((playerPushers & behindBit) != 0) {
+            return true;
+        }
+
+        // Check for pusher behind diagonally left
+        if (col > 0) {
+            long leftDiagBit = 1L << (backRow * 8 + col - 1);
+            if ((playerPushers & leftDiagBit) != 0) {
+                return true;
+            }
+        }
+
+        // Check for pusher behind diagonally right
+        if (col < 7) {
+            long rightDiagBit = 1L << (backRow * 8 + col + 1);
+            if ((playerPushers & rightDiagBit) != 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    public long getHash() {
-        return zobristHash;
+    public boolean isRowCovered(Player player, int row) {
+        Boolean[] covered = new Boolean[8];
+        Arrays.fill(covered, false);
+
+        int checkRow = row - player.getDirection();
+        if (checkRow < 0 || checkRow > 7) {
+            return false;
+        }
+
+        // Get the row as a bitboard
+        long rowMask = 0xFFL << (checkRow * 8);
+        long playerPushers = player == Player.RED ? redPushers : blackPushers;
+        long playerPawns = player == Player.RED ? redPawns : blackPawns;
+
+        // Check pushers in the row
+        long pushersInRow = playerPushers & rowMask;
+        while (pushersInRow != 0) {
+            int col = Long.numberOfTrailingZeros(pushersInRow) % 8;
+
+            if (col > 0) {
+                covered[col - 1] = true;
+            }
+            if (col < 7) {
+                covered[col + 1] = true;
+            }
+
+            pushersInRow &= pushersInRow - 1;
+        }
+
+        // Check pawns in the row
+        long pawnsInRow = playerPawns & rowMask;
+        while (pawnsInRow != 0) {
+            int col = Long.numberOfTrailingZeros(pawnsInRow) % 8;
+
+            if (col > 0 && col < 7) {
+                int behindRow = checkRow - player.getDirection();
+                if (behindRow >= 0 && behindRow < 8) {
+                    long behindRowMask = 0xFFL << (behindRow * 8);
+                    long behindPushers = playerPushers & behindRowMask;
+
+                    // Check for pusher behind diagonally left
+                    long leftDiagBit = 1L << (behindRow * 8 + col - 1);
+                    if ((behindPushers & leftDiagBit) != 0) {
+                        covered[col + 1] = true;
+                    }
+
+                    // Check for pusher behind diagonally right
+                    long rightDiagBit = 1L << (behindRow * 8 + col + 1);
+                    if ((behindPushers & rightDiagBit) != 0) {
+                        covered[col - 1] = true;
+                    }
+                }
+            }
+
+            pawnsInRow &= pawnsInRow - 1;
+        }
+
+        return Arrays.stream(covered).allMatch(c -> c);
     }
 
     public boolean canEat(Player player, int piece, int row, int col) {
@@ -259,12 +490,155 @@ public class Board {
             return false;
         }
 
-        int leftColToCheck = col - 1;
-        if (leftColToCheck >= 0 && get(rowToCheck, leftColToCheck) == piece) {
-            return true;
+        // Convert piece type to bitboard
+        long pieceBitboard;
+        switch (piece) {
+            case RED_PUSHER:
+                pieceBitboard = redPushers;
+                break;
+            case RED_PAWN:
+                pieceBitboard = redPawns;
+                break;
+            case BLACK_PUSHER:
+                pieceBitboard = blackPushers;
+                break;
+            case BLACK_PAWN:
+                pieceBitboard = blackPawns;
+                break;
+            default:
+                return false;
         }
 
+        // Check left diagonal
+        int leftColToCheck = col - 1;
+        if (leftColToCheck >= 0) {
+            int leftIndex = rowToCheck * 8 + leftColToCheck;
+            long leftBit = 1L << leftIndex;
+            if ((pieceBitboard & leftBit) != 0) {
+                return true;
+            }
+        }
+
+        // Check right diagonal
         int rightColToCheck = col + 1;
-        return rightColToCheck < 8 && get(rowToCheck, rightColToCheck) == piece;
+        if (rightColToCheck < 8) {
+            int rightIndex = rowToCheck * 8 + rightColToCheck;
+            long rightBit = 1L << rightIndex;
+            if ((pieceBitboard & rightBit) != 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public void set(int row, int col, int piece) {
+        int index = row * 8 + col;
+        long bit = 1L << index;
+
+        // Clear the position from all bitboards first
+        redPushers &= ~bit;
+        redPawns &= ~bit;
+        blackPushers &= ~bit;
+        blackPawns &= ~bit;
+
+        // Set the piece in the appropriate bitboard
+        switch (piece) {
+            case RED_PUSHER:
+                redPushers |= bit;
+                break;
+            case RED_PAWN:
+                redPawns |= bit;
+                break;
+            case BLACK_PUSHER:
+                blackPushers |= bit;
+                break;
+            case BLACK_PAWN:
+                blackPawns |= bit;
+                break;
+            case EMPTY:
+                // Already cleared above, do nothing
+                break;
+        }
+
+        // Update Zobrist hash
+        updateZobristHash(row, col, piece);
+    }
+
+    public int get(int row, int col) {
+        int index = row * 8 + col;
+        long bit = 1L << index;
+
+        // Check each bitboard to see which piece is at this position
+        if ((redPushers & bit) != 0) {
+            return RED_PUSHER;
+        } else if ((redPawns & bit) != 0) {
+            return RED_PAWN;
+        } else if ((blackPushers & bit) != 0) {
+            return BLACK_PUSHER;
+        } else if ((blackPawns & bit) != 0) {
+            return BLACK_PAWN;
+        } else {
+            return EMPTY;
+        }
+    }
+
+    private void updateZobristHash(int row, int col, int piece) {
+        // Remove old piece from hash (if any)
+        // This would need to track what was there before
+        // For now, just add the new piece
+        if (piece != EMPTY) {
+            zobristHash ^= ZobristHash.getHashForPosition(row, col, piece);
+        }
+    }
+
+    public int get(int index) {
+        long bit = 1L << index;
+        if ((redPushers & bit) != 0) return RED_PUSHER;
+        if ((redPawns & bit) != 0) return RED_PAWN;
+        if ((blackPushers & bit) != 0) return BLACK_PUSHER;
+        if ((blackPawns & bit) != 0) return BLACK_PAWN;
+        return EMPTY;
+    }
+
+    public boolean hasPusherAt(int index) {
+        long bit = 1L << index;
+        return ((redPushers | blackPushers) & bit) != 0;
+    }
+
+    public long allReds() {
+        return redPushers | redPawns;
+    }
+
+    public long allBlacks() {
+        return blackPushers | blackPawns;
+    }
+
+    public long occupied() {
+        return allReds() | allBlacks();
+    }
+
+    public long getRedPushers() {
+        return redPushers;
+    }
+
+    public long getRedPawns() {
+        return redPawns;
+    }
+
+    public long getBlackPushers() {
+        return blackPushers;
+    }
+
+    public long getBlackPawns() {
+        return blackPawns;
+    }
+
+    public Move getLastMove() {
+        return lastMove;
+    }
+
+    public long getHash() {
+        return zobristHash;
     }
 }

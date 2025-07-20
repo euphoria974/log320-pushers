@@ -10,13 +10,14 @@ import java.io.IOException;
 import java.net.Socket;
 
 import static log320.Const.ALL_MOVES;
+import static log320.Const.RED_PUSHER;
 
 class Client {
     public static void main(String[] args) {
         // Init new instances
         final Game game = new Game();
         ALL_MOVES.get("A1A2");
-        ZobristHash.getTable();
+        ZobristHash.getHashForPosition(0, 0, RED_PUSHER);
 
         try {
             Socket client = new Socket("localhost", 8888);
@@ -53,6 +54,7 @@ class Client {
                 // Le serveur demande le prochain coup
                 // Le message contient aussi le dernier coup joue.
                 if (cmd == '3') {
+                    long startTime = System.currentTimeMillis();
                     byte[] aBuffer = new byte[16];
 
                     int size = input.available();
@@ -68,10 +70,13 @@ class Client {
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
+                    long duration = System.currentTimeMillis() - startTime;
+                    System.out.println("\033[92;40mCoup joué en " + (duration / 1000d) + " secondes");
                 }
 
                 // Le dernier coup est invalide
                 if (cmd == '4') {
+                    game.undo();
                     game.printBoard();
                     System.out.println("\033[91;40m" + game.getLastMove() + " est invalide!! Entrez un nouveau coup");
 
@@ -93,7 +98,7 @@ class Client {
                     System.out.println("\033[93;40mPartie Terminé. Le dernier coup joué est: " + s);
                     output.flush();
                     game.over();
-                    break;
+                    // break;
                 }
             }
         } catch (IOException e) {
