@@ -30,7 +30,7 @@ public class CPUPlayer {
     public Move getNextMove() {
         long startTime = System.currentTimeMillis();
         BEST_MOVES.clear();
-        int currentDepth = 1;
+        int maxDepth = 1;
         int bestScore;
         int finalBestScore = Integer.MIN_VALUE;
         List<Move> possibleMoves = BOARD.getSortedPossibleMoves(PLAYER);
@@ -38,6 +38,7 @@ public class CPUPlayer {
         List<Future<int[]>> futures;
 
         TRANSPOSITION_TABLE.newGeneration();
+
 
         timeLoop:
         while (!isTimeExceeded(startTime)) {
@@ -51,14 +52,15 @@ public class CPUPlayer {
                 Board boardCopy = BOARD.clone(move);
 
                 final int idx = moveIndex;
-                final int finalCurrentDepth = currentDepth;
+                int finalMaxDepth = maxDepth;
                 futures.add(executor.submit(() -> {
                     int score = alphaBeta(
                             boardCopy,
                             false,
                             Integer.MIN_VALUE,
                             Integer.MAX_VALUE,
-                            finalCurrentDepth,
+                            1,
+                            finalMaxDepth,
                             startTime
                     );
                     return new int[]{score, idx};
@@ -98,7 +100,7 @@ public class CPUPlayer {
                 BEST_MOVES.addAll(CURRENT_BEST_MOVES);
             }
 
-            currentDepth++;
+            maxDepth++;
         }
 
         if (BEST_MOVES.isEmpty()) {
@@ -106,12 +108,12 @@ public class CPUPlayer {
             BEST_MOVES.addAll(possibleMoves);
         }
 
-        System.out.println("\033[32;40mBest moves found: " + BEST_MOVES + " with score: " + finalBestScore + " at depth: " + currentDepth);
+        System.out.println("\033[32;40mBest moves found: " + BEST_MOVES + " with score: " + finalBestScore + " at depth: " + maxDepth);
 
         return BEST_MOVES.get(RANDOM.nextInt(BEST_MOVES.size()));
     }
 
-    private int alphaBeta(Board board, boolean isMax, int alpha, int beta, int currentDepth, long startTime) {
+    private int alphaBeta(Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
         if (isTimeExceeded(startTime)) {
             return Integer.MIN_VALUE;
         }
@@ -119,14 +121,14 @@ public class CPUPlayer {
         int boardScore = board.evaluate(PLAYER);
         // pour favoriser les coups gagnants on soustrait le depth
         if (boardScore >= WIN_SCORE) {
-            return WIN_SCORE + currentDepth;
+            return WIN_SCORE - currentDepth;
         }
 
         if (boardScore <= LOSS_SCORE) {
-            return LOSS_SCORE - currentDepth;
+            return LOSS_SCORE + currentDepth;
         }
 
-        if (currentDepth <= 0) {
+        if (currentDepth >= maxDepth) {
             return boardScore;
         }
 
@@ -163,7 +165,7 @@ public class CPUPlayer {
         if (isMax) {
             for (Move move : possibleMoves) {
                 board.play(move);
-                int value = alphaBeta(board, false, alpha, beta, currentDepth - 1, startTime);
+                int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
                 score = Math.max(score, value);
@@ -176,7 +178,7 @@ public class CPUPlayer {
         } else {
             for (Move move : possibleMoves) {
                 board.play(move);
-                int value = alphaBeta(board, true, alpha, beta, currentDepth - 1, startTime);
+                int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
                 score = Math.min(score, value);

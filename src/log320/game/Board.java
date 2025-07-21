@@ -542,6 +542,7 @@ public class Board {
         blackPushers &= ~bit;
         blackPawns &= ~bit;
 
+        // Set the piece in the appropriate bitboard
         switch (piece) {
             case RED_PUSHER:
                 redPushers |= bit;
@@ -556,9 +557,11 @@ public class Board {
                 blackPawns |= bit;
                 break;
             case EMPTY:
+                // Already cleared above, do nothing
                 break;
         }
 
+        // Update Zobrist hash
         updateZobristHash(row, col, piece);
     }
 
