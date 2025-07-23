@@ -434,6 +434,7 @@ public class Board {
             }
 
             pawnsInRow &= pawnsInRow - 1;
+            pawnsInRow &= pawnsInRow - 1;
         }
 
         return Arrays.stream(covered).allMatch(c -> c);
@@ -516,9 +517,6 @@ public class Board {
                 // Already cleared above, do nothing
                 break;
         }
-
-        // Update Zobrist hash
-        updateZobristHash(row, col, piece);
     }
 
     public int get(int row, int col) {
@@ -536,15 +534,6 @@ public class Board {
             return BLACK_PAWN;
         } else {
             return EMPTY;
-        }
-    }
-
-    private void updateZobristHash(int row, int col, int piece) {
-        // Remove old piece from hash (if any)
-        // This would need to track what was there before
-        // For now, just add the new piece
-        if (piece != EMPTY) {
-            zobristHash ^= ZobristHash.getHashForPosition(row, col, piece);
         }
     }
 
