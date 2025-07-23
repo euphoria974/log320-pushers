@@ -134,7 +134,7 @@ public class CPUPlayer {
         int originalAlpha = alpha;
 
         TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
-        if (entry != null && entry.depth >= (maxDepth - currentDepth)) {
+        if (entry != null && entry.depth >= maxDepth) {
             switch (entry.type) {
                 case EXACT:
                     return entry.score;
