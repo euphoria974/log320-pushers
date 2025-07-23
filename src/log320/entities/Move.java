@@ -42,11 +42,8 @@ public class Move {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof Move) {
-            Move other = (Move) obj;
-            return FROM == other.FROM && TO == other.TO;
-        }
-        
-        return false;
+        if (this == obj) return true;
+        if (!(obj instanceof Move other)) return false;
+        return FROM == other.FROM && TO == other.TO;
     }
 }

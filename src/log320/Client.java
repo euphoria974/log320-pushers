@@ -30,6 +30,8 @@ class Client {
 
                 // Debut de la partie en joueur rouge
                 if (cmd == '1') {
+                    long startTime = System.currentTimeMillis();
+                    
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
@@ -40,6 +42,9 @@ class Client {
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
+
+                    long duration = System.currentTimeMillis() - startTime;
+                    System.out.println("\033[92;40mCoup joué en " + (duration / 1000d) + " secondes");
                 }
 
                 // Debut de la partie en joueur Noir

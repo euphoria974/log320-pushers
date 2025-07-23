@@ -2,6 +2,7 @@ package log320.game;
 
 import log320.entities.Move;
 import log320.entities.Player;
+import log320.transposition.NodeType;
 import log320.transposition.TranspositionTable;
 
 import java.util.ArrayList;
@@ -24,8 +25,8 @@ public class CPUPlayer {
         this.PLAYER = player;
     }
 
-    // Retourne la liste des coups possibles.  Cette liste contient
-    // plusieurs coups possibles si et seuleument si plusieurs coups
+    // Retourne la liste des coups possibles. Cette liste contient
+    // plusieurs coups possibles si et seulement si plusieurs coups
     // ont le même score.
     public Move getNextMove() {
         long startTime = System.currentTimeMillis();
@@ -36,8 +37,6 @@ public class CPUPlayer {
         List<Move> possibleMoves = BOARD.getSortedPossibleMoves(PLAYER);
         ExecutorService executor;
         List<Future<int[]>> futures;
-
-        TRANSPOSITION_TABLE.newGeneration();
 
 
         timeLoop:
@@ -119,7 +118,7 @@ public class CPUPlayer {
         }
 
         int boardScore = board.evaluate(PLAYER);
-        // pour favoriser les coups gagnants on soustrait le depth
+        // pour favoriser les coups gagnants, on soustrait le depth
         if (boardScore >= WIN_SCORE) {
             return WIN_SCORE - currentDepth;
         }
@@ -132,24 +131,26 @@ public class CPUPlayer {
             return boardScore;
         }
 
-        /*TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
-        if (entry != null && entry.depth >= currentDepth) {
+        int originalAlpha = alpha;
+
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
+        if (entry != null && entry.depth >= (maxDepth - currentDepth)) {
             switch (entry.type) {
                 case EXACT:
                     return entry.score;
                 case ALPHA:
-                    if (entry.score <= alpha) return alpha;
+                    if (entry.score <= alpha) return entry.score;
                     break;
                 case BETA:
-                    if (entry.score >= beta) return beta;
+                    if (entry.score >= beta) return entry.score;
                     break;
             }
-        }*/
+        }
 
         Player player = isMax ? PLAYER : PLAYER.getOpponent();
         List<Move> possibleMoves = board.getSortedPossibleMoves(player);
 
-        /*Move bestMove = null;
+        Move bestMove = null;
         if (entry != null && entry.bestMove != null) {
             for (int i = 0; i < possibleMoves.size(); i++) {
                 if (possibleMoves.get(i).equals(entry.bestMove)) {
@@ -158,7 +159,7 @@ public class CPUPlayer {
                     break;
                 }
             }
-        }*/
+        }
 
         int score = isMax ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
@@ -168,7 +169,11 @@ public class CPUPlayer {
                 int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                score = Math.max(score, value);
+                if (value > score) {
+                    score = value;
+                    bestMove = move;
+                }
+
                 alpha = Math.max(alpha, score);
 
                 if (alpha >= beta) {
@@ -181,7 +186,11 @@ public class CPUPlayer {
                 int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                score = Math.min(score, value);
+                if (value < score) {
+                    score = value;
+                    bestMove = move;
+                }
+
                 beta = Math.min(beta, score);
 
                 if (beta <= alpha) {
@@ -190,7 +199,7 @@ public class CPUPlayer {
             }
         }
 
-        /*NodeType nodeType;
+        NodeType nodeType;
         if (score <= originalAlpha) {
             nodeType = NodeType.ALPHA;
         } else if (score >= beta) {
@@ -199,7 +208,7 @@ public class CPUPlayer {
             nodeType = NodeType.EXACT;
         }
 
-        TRANSPOSITION_TABLE.put(board.getHash(), currentDepth, score, nodeType, bestMove);*/
+        TRANSPOSITION_TABLE.put(board.getHash(), currentDepth, score, nodeType, bestMove);
 
         return score;
     }

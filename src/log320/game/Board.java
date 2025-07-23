@@ -186,6 +186,9 @@ public class Board {
         int movedPiece = EMPTY;
         int capturedPiece = EMPTY;
 
+        UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
+        MOVE_STACK.push(ms.set(redPushers, redPawns, blackPushers, blackPawns, zobristHash));
+
         // Find the moved piece
         if ((redPushers & fromBit) != 0) {
             movedPiece = RED_PUSHER;
@@ -216,9 +219,6 @@ public class Board {
             blackPawns &= ~toBit;
         }
 
-        UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
-        MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece));
-
         if (movedPiece == RED_PUSHER) {
             redPushers |= toBit;
         } else if (movedPiece == RED_PAWN) {
@@ -236,61 +236,17 @@ public class Board {
         if (MOVE_STACK.isEmpty()) return;
         UndoMoveState ms = MOVE_STACK.pop();
 
-        // Convert BitMove indices to row/col for Zobrist hash updates
-        int fromRow = ms.move.getFrom() / 8;
-        int fromCol = ms.move.getFrom() % 8;
-        int toRow = ms.move.getTo() / 8;
-        int toCol = ms.move.getTo() % 8;
-
-        // Bit masks for the positions
-        long fromBit = 1L << ms.move.getFrom();
-        long toBit = 1L << ms.move.getTo();
-
-        // Remove the moved piece from destination
-        if (ms.movedPiece == RED_PUSHER) {
-            redPushers &= ~toBit;
-        } else if (ms.movedPiece == RED_PAWN) {
-            redPawns &= ~toBit;
-        } else if (ms.movedPiece == BLACK_PUSHER) {
-            blackPushers &= ~toBit;
-        } else if (ms.movedPiece == BLACK_PAWN) {
-            blackPawns &= ~toBit;
-        }
-
-        // Restore the captured piece at destination (if any)
-        if (ms.capturedPiece == RED_PUSHER) {
-            redPushers |= toBit;
-        } else if (ms.capturedPiece == RED_PAWN) {
-            redPawns |= toBit;
-        } else if (ms.capturedPiece == BLACK_PUSHER) {
-            blackPushers |= toBit;
-        } else if (ms.capturedPiece == BLACK_PAWN) {
-            blackPawns |= toBit;
-        }
-
-        // Restore the moved piece at source
-        if (ms.movedPiece == RED_PUSHER) {
-            redPushers |= fromBit;
-        } else if (ms.movedPiece == RED_PAWN) {
-            redPawns |= fromBit;
-        } else if (ms.movedPiece == BLACK_PUSHER) {
-            blackPushers |= fromBit;
-        } else if (ms.movedPiece == BLACK_PAWN) {
-            blackPawns |= fromBit;
-        }
-
-        zobristHash = ZobristHash.updateHash(zobristHash, toRow, toCol, ms.movedPiece, fromRow, fromCol, ms.capturedPiece);
+        redPushers = ms.redPushers;
+        redPawns = ms.redPawns;
+        blackPushers = ms.blackPushers;
+        blackPawns = ms.blackPawns;
+        zobristHash = ms.zobristHash;
 
         moveStatePoolIndex--;
     }
 
     public int evaluate(Player player) {
-        int playerScore = EVALUATOR.evaluate(player);
-
-        if (playerScore == WIN_SCORE || playerScore == LOSS_SCORE)
-            return playerScore;
-
-        return playerScore - EVALUATOR.evaluate(player.getOpponent());
+        return EVALUATOR.evaluate(player);
     }
 
     public ArrayList<Move> getSortedPossibleMoves(Player player) {

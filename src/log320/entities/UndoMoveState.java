@@ -1,13 +1,14 @@
 package log320.entities;
 
 public class UndoMoveState {
-    public int movedPiece, capturedPiece;
-    public Move move;
+    public long redPushers, redPawns, blackPushers, blackPawns, zobristHash;
 
-    public UndoMoveState set(Move m, int mp, int cp) {
-        move = m;
-        movedPiece = mp;
-        capturedPiece = cp;
+    public UndoMoveState set(long r, long rp, long b, long bp, long z) {
+        redPushers = r;
+        redPawns = rp;
+        blackPushers = b;
+        blackPawns = bp;
+        zobristHash = z;
         return this;
     }
 }
