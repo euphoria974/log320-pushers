@@ -16,7 +16,7 @@ class Client {
         // Init new instances
         final Game game = new Game();
         ALL_MOVES.get("A1A2");
-        ZobristHash.getTable();
+        ZobristHash.getPiecesTable();
 
         try {
             Socket client = new Socket("localhost", 8888);

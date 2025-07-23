@@ -1,24 +1,42 @@
 package tests;
 
-import log320.entities.Player;
 import log320.game.Board;
-import log320.transposition.ZobristHash;
+
+import static log320.Const.ALL_MOVES;
 
 public class ZobristTest {
     public static void main(String[] args) {
         Board board = new Board();
         board.init();
 
-        long hash = ZobristHash.computeHash(board);
+        System.out.println("Zobrist Hash: " + board.getHash());
 
-        System.out.println("Zobrist Hash: " + hash);
+        board.play(ALL_MOVES.get("A7A6"));
 
-        hash ^= ZobristHash.getTable()[0][0][Player.BLACK.getPusher()];
+        System.out.println("Zobrist Hash: " + board.getHash());
 
-        System.out.println("Zobrist Hash: " + hash);
+        board.undo();
 
-        hash ^= ZobristHash.getTable()[0][0][Player.BLACK.getPusher()];
+        System.out.println("Zobrist Hash: " + board.getHash());
 
-        System.out.println("Zobrist Hash: " + hash);
+
+        board.play(ALL_MOVES.get("A7A6"));
+        System.out.println("Zobrist Hash: " + board.getHash());
+        board.play(ALL_MOVES.get("B7B6"));
+        System.out.println("Zobrist Hash: " + board.getHash());
+        board.play(ALL_MOVES.get("B7B6"));
+        System.out.println("Zobrist Hash: " + board.getHash());
+
+        board.undo();
+
+        System.out.println("Zobrist Hash: " + board.getHash());
+
+        board.undo();
+
+        System.out.println("Zobrist Hash: " + board.getHash());
+
+        board.undo();
+
+        System.out.println("Zobrist Hash: " + board.getHash());
     }
 }

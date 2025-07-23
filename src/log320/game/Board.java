@@ -33,6 +33,8 @@ public class Board {
     public Board(String s) {
         this();
         build(s);
+
+        zobristHash = ZobristHash.computeHash(this);
     }
 
     public Move getLastMove() {
@@ -52,8 +54,6 @@ public class Board {
                 row--;
             }
         }
-
-        zobristHash = ZobristHash.computeHash(this);
     }
 
     public void init() {
@@ -92,7 +92,7 @@ public class Board {
 
     public void set(int row, int col, int piece) {
         BOARD[row * 8 + col] = piece;
-        zobristHash ^= ZobristHash.getTable()[row][col][piece];
+        zobristHash ^= ZobristHash.getPiecesTable()[row][col][piece];
     }
 
     public void play(Move move) {
@@ -102,10 +102,17 @@ public class Board {
         int capturedPiece = get(move.getToRow(), move.getToCol());
 
         UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
-        MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece));
+        MOVE_STACK.push(ms.set(move, movedPiece, capturedPiece, zobristHash));
 
         set(move.getFromRow(), move.getFromCol(), EMPTY);
         set(move.getToRow(), move.getToCol(), movedPiece);
+
+        zobristHash ^= ZobristHash.getPiecesTable()[move.getFromRow()][move.getFromCol()][movedPiece];
+
+        if (capturedPiece != EMPTY)
+            zobristHash ^= ZobristHash.getPiecesTable()[move.getToRow()][move.getToCol()][capturedPiece];
+
+        zobristHash ^= ZobristHash.getPiecesTable()[move.getToRow()][move.getToCol()][movedPiece];
     }
 
     public void undo() {
@@ -114,6 +121,8 @@ public class Board {
         set(ms.move.getToRow(), ms.move.getToCol(), ms.capturedPiece);
         set(ms.move.getFromRow(), ms.move.getFromCol(), ms.movedPiece);
         moveStatePoolIndex--;
+
+        zobristHash = ms.zobristHash;
     }
 
     public int evaluate(Player player) {

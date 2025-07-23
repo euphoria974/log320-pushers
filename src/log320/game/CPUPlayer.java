@@ -4,6 +4,7 @@ import log320.entities.Move;
 import log320.entities.Player;
 import log320.transposition.NodeType;
 import log320.transposition.TranspositionTable;
+import log320.transposition.ZobristHash;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +27,7 @@ public class CPUPlayer {
         this.PLAYER = player;
     }
 
-    // Retourne la liste des coups possibles.  Cette liste contient
+    // Retourne la liste des coups possibles. Cette liste contient
     // plusieurs coups possibles si et seuleument si plusieurs coups
     // ont le même score.
     public Move getNextMove() {
@@ -38,8 +39,6 @@ public class CPUPlayer {
         List<Move> possibleMoves = BOARD.getPossibleMoves(PLAYER);
         ExecutorService executor;
         List<Future<int[]>> futures;
-
-        TRANSPOSITION_TABLE.newGeneration();
 
         timeLoop:
         while (!isTimeExceeded(startTime)) {
@@ -134,26 +133,24 @@ public class CPUPlayer {
             return boardScore;
         }
 
+        int originalAlpha = alpha;
+
         TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
-        if (entry != null && entry.depth >= maxDepth - currentDepth) {
+        if (entry != null && entry.depth >= (maxDepth - currentDepth)) {
             switch (entry.type) {
                 case EXACT:
                     return entry.score;
                 case ALPHA:
-                    if (entry.score <= alpha) return alpha;
+                    if (entry.score <= alpha) return entry.score;
                     break;
                 case BETA:
-                    if (entry.score >= beta) return beta;
+                    if (entry.score >= beta) return entry.score;
                     break;
             }
         }
 
         Player player = isMax ? PLAYER : PLAYER.getOpponent();
         List<Move> possibleMoves = board.getPossibleMoves(player);
-
-        if (possibleMoves.isEmpty()) {
-            return player == PLAYER ? LOSS_SCORE : WIN_SCORE;
-        }
 
         Move bestMove = null;
         if (entry != null && entry.bestMove != null) {
@@ -166,7 +163,6 @@ public class CPUPlayer {
             }
         }
 
-        int originalAlpha = alpha;
         int score = isMax ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
         if (isMax) {
@@ -175,7 +171,11 @@ public class CPUPlayer {
                 int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                score = Math.max(score, value);
+                if (value > score) {
+                    score = value;
+                    bestMove = move;
+                }
+
                 alpha = Math.max(alpha, score);
 
                 if (alpha >= beta) {
@@ -188,7 +188,11 @@ public class CPUPlayer {
                 int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
                 board.undo();
 
-                score = Math.min(score, value);
+                if (value < score) {
+                    score = value;
+                    bestMove = move;
+                }
+
                 beta = Math.min(beta, score);
 
                 if (beta <= alpha) {
@@ -206,7 +210,11 @@ public class CPUPlayer {
             nodeType = NodeType.EXACT;
         }
 
-        TRANSPOSITION_TABLE.put(board.getHash(), maxDepth - currentDepth, score, nodeType, bestMove);
+        if (board.getHash() != ZobristHash.computeHash(board)) {
+            // System.out.println("\033[91;40m!!! CRITICAL ERROR: Hash mismatch !!!");
+        }
+
+        TRANSPOSITION_TABLE.put(board.getHash(), currentDepth, score, nodeType, bestMove);
 
         return score;
     }
