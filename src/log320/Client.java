@@ -8,6 +8,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Scanner;
 
 import static log320.Const.ALL_MOVES;
 import static log320.Const.RED_PUSHER;
@@ -19,8 +20,23 @@ class Client {
         ALL_MOVES.get("A1A2");
         ZobristHash.getHashForPosition(0, 0, RED_PUSHER);
 
+        String serverAddress = "localhost";
+
+        System.out.println("\033[32;40mEnter the server address or press enter to use localhost (default: " + serverAddress + ")");
+        System.out.print("\033[91;40mInput: ");
+
+        Scanner in = new Scanner(System.in);
+        String ipInput = in.nextLine();
+
+        if (!ipInput.isEmpty())
+        {
+            serverAddress = ipInput;
+        }
+
+        System.out.println();
+
         try {
-            Socket client = new Socket("localhost", 8888);
+            Socket client = new Socket(serverAddress, 8888);
             BufferedInputStream input = new BufferedInputStream(client.getInputStream());
             BufferedOutputStream output = new BufferedOutputStream(client.getOutputStream());
 
