@@ -4,6 +4,7 @@ import log320.entities.Move;
 import log320.entities.Player;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,6 +40,11 @@ public class Game {
     public void over() {
         if (board.evaluate(currentPlayer) == WIN_SCORE) {
             return;
+        }
+
+        File dataDir = new File("data");
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
         }
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("data/" + currentPlayer.name() + "-" + UUID.randomUUID() + ".txt"))) {
