@@ -4,7 +4,6 @@ import log320.entities.Move;
 import log320.entities.Player;
 import log320.transposition.NodeType;
 import log320.transposition.TranspositionTable;
-import log320.transposition.ZobristHash;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -208,7 +207,7 @@ public class CPUPlayer {
         } else {
             nodeType = NodeType.EXACT;
         }
-      
+
         TRANSPOSITION_TABLE.put(board.getHash(), currentDepth, score, nodeType, bestMove);
 
         return score;

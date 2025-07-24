@@ -6,6 +6,7 @@ import log320.game.Board;
 import log320.game.CPUPlayer;
 import log320.transposition.ZobristHash;
 
+import static log320.Const.ALL_MOVES;
 import static log320.Const.BLACK_PUSHER;
 
 public class ZobristTest {
@@ -34,6 +35,8 @@ public class ZobristTest {
         board.undo();
 
         System.out.println("Zobrist Hash: " + board.getHash());
+
+        long hash = ZobristHash.computeHash(board);
 
         hash ^= ZobristHash.getHashForPosition(0, 0, BLACK_PUSHER);
 

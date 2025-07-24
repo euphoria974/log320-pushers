@@ -40,7 +40,6 @@ public class Board {
     public Board(String s) {
         this();
         build(s);
-
         zobristHash = ZobristHash.computeHash(this);
     }
 
@@ -243,8 +242,6 @@ public class Board {
         zobristHash = ms.zobristHash;
 
         moveStatePoolIndex--;
-
-        zobristHash = ms.zobristHash;
     }
 
     public int evaluate(Player player) {
