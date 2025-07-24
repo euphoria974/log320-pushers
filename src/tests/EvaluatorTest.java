@@ -11,7 +11,7 @@ import java.util.List;
 
 public class EvaluatorTest {
     public static void main(String[] args) {
-        Path path = Paths.get("boardStates", "test7.brd");
+        Path path = Paths.get("boardStates", "what.brd");
         String content;
         try {
             List<String> lines = Files.readAllLines(path);
@@ -24,16 +24,16 @@ public class EvaluatorTest {
         System.out.println("red score: " + board.evaluate(Player.RED));
         System.out.println("black score: " + board.evaluate(Player.BLACK));
 
-        for (int i = 0; i < 8; i++) {
+        /* TODO for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
                 board.isExposed(Player.RED, i, j);
                 board.isExposed(Player.BLACK, i, j);
 
-                board.set(i, j, Player.RED.getPawn());
-                board.set(i, j, Player.BLACK.getPawn());
+                board.set(i, j, RED_PAWN);
+                board.set(i, j, BLACK_PAWN);
                 board.isPawnActivated(Player.RED, i, j);
                 board.isPawnActivated(Player.BLACK, i, j);
             }
-        }
+        }*/
     }
 }

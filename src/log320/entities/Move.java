@@ -1,49 +1,49 @@
 package log320.entities;
 
-import static log320.Const.COL_CHAR_OFFSET;
+import static log320.Const.*;
 
 public class Move {
-    private final int FROM_ROW, TO_ROW, FROM_COL, TO_COL;
+    private final int FROM;
+    private final int TO;
     private final String STRING_MOVE;
     private final boolean IS_WINNING;
-    private final boolean IS_DIAGONAL;
 
-    public Move(int fromRow, int fromCol, int toRow, int toCol) {
-        this.FROM_ROW = fromRow;
-        this.TO_ROW = toRow;
-        this.FROM_COL = fromCol;
-        this.TO_COL = toCol;
-        this.STRING_MOVE = "" + ((char) (fromCol + COL_CHAR_OFFSET)) + (fromRow + 1) + ((char) (toCol + COL_CHAR_OFFSET)) + (toRow + 1);
-        this.IS_WINNING = toRow == Player.BLACK.getWinningRow() || toRow == Player.RED.getWinningRow();
-        this.IS_DIAGONAL = Math.abs(fromRow - toRow) == 1 && Math.abs(fromCol - toCol) == 1;
+    public Move(int from, int to) {
+        this.FROM = from;
+        this.TO = to;
+        this.STRING_MOVE = toString(from, to);
+        this.IS_WINNING = TO / 8 == RED_WINNING_ROW || TO / 8 == BLACK_WINNING_ROW;
     }
 
-    public int getFromRow() {
-        return FROM_ROW;
-    }
-
-    public int getToRow() {
-        return TO_ROW;
-    }
-
-    public int getFromCol() {
-        return FROM_COL;
-    }
-
-    public int getToCol() {
-        return TO_COL;
+    @Override
+    public String toString() {
+        return STRING_MOVE;
     }
 
     public boolean isWinning() {
         return IS_WINNING;
     }
 
-    public boolean isDiagonal() {
-        return IS_DIAGONAL;
+    public int getFrom() {
+        return FROM;
+    }
+
+    public int getTo() {
+        return TO;
+    }
+
+    public static String indexToCoord(int index) {
+        return "" + (char) (COL_CHAR_OFFSET + (index % 8)) + (index / 8 + 1);
+    }
+
+    public static String toString(int from, int to) {
+        return indexToCoord(from) + indexToCoord(to);
     }
 
     @Override
-    public String toString() {
-        return STRING_MOVE;
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Move other)) return false;
+        return FROM == other.FROM && TO == other.TO;
     }
 }

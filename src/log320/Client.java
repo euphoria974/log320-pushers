@@ -10,13 +10,14 @@ import java.io.IOException;
 import java.net.Socket;
 
 import static log320.Const.ALL_MOVES;
+import static log320.Const.RED_PUSHER;
 
 class Client {
     public static void main(String[] args) {
         // Init new instances
         final Game game = new Game();
         ALL_MOVES.get("A1A2");
-        ZobristHash.getPiecesTable();
+        ZobristHash.getHashForPosition(0, 0, RED_PUSHER);
 
         try {
             Socket client = new Socket("localhost", 8888);
@@ -29,6 +30,8 @@ class Client {
 
                 // Debut de la partie en joueur rouge
                 if (cmd == '1') {
+                    long startTime = System.currentTimeMillis();
+
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
@@ -39,6 +42,9 @@ class Client {
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
+
+                    long duration = System.currentTimeMillis() - startTime;
+                    System.out.println("\033[92;40mCoup joué en " + (duration / 1000d) + " secondes");
                 }
 
                 // Debut de la partie en joueur Noir
@@ -53,6 +59,7 @@ class Client {
                 // Le serveur demande le prochain coup
                 // Le message contient aussi le dernier coup joue.
                 if (cmd == '3') {
+                    long startTime = System.currentTimeMillis();
                     byte[] aBuffer = new byte[16];
 
                     int size = input.available();
@@ -68,10 +75,13 @@ class Client {
                     String move = game.getNextMove().toString();
                     output.write(move.getBytes(), 0, move.length());
                     output.flush();
+                    long duration = System.currentTimeMillis() - startTime;
+                    System.out.println("\033[92;40mCoup joué en " + (duration / 1000d) + " secondes");
                 }
 
                 // Le dernier coup est invalide
                 if (cmd == '4') {
+                    game.undo();
                     game.printBoard();
                     System.out.println("\033[91;40m" + game.getLastMove() + " est invalide!! Entrez un nouveau coup");
 
@@ -87,13 +97,11 @@ class Client {
                     input.read(aBuffer, 0, size);
 
                     String s = new String(aBuffer);
-                    String m = s.replaceAll("[^A-Za-z0-9]", "");
-                    game.play(m);
 
                     System.out.println("\033[93;40mPartie Terminé. Le dernier coup joué est: " + s);
                     output.flush();
+
                     game.over();
-                    break;
                 }
             }
         } catch (IOException e) {

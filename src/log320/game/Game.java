@@ -4,6 +4,7 @@ import log320.entities.Move;
 import log320.entities.Player;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,6 +42,11 @@ public class Game {
             return;
         }
 
+        File dataDir = new File("data");
+        if (!dataDir.exists()) {
+            dataDir.mkdirs();
+        }
+
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("data/" + currentPlayer.name() + "-" + UUID.randomUUID() + ".txt"))) {
             for (Move move : PLAYED_MOVES) {
                 writer.write(move.toString());
@@ -66,6 +72,10 @@ public class Game {
         if (lastMove == null || !lastMove.toString().equals(move.toString())) {
             PLAYED_MOVES.add(move);
         }
+    }
+
+    public void undo() {
+        board.undo();
     }
 
     public void printBoard() {
