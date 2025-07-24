@@ -13,13 +13,31 @@ public class ZobristTest {
         Board board = new Board();
         board.init();
 
-        long hash = ZobristHash.computeHash(board);
+        System.out.println("Zobrist Hash: " + board.getHash());
 
-        System.out.println("Zobrist Hash: " + hash);
+        board.play(ALL_MOVES.get("A7A6"));
+
+        System.out.println("Zobrist Hash: " + board.getHash());
+
+        board.undo();
+
+        System.out.println("Zobrist Hash: " + board.getHash());
+
+
+        board.play(ALL_MOVES.get("A7A6"));
+        System.out.println("Zobrist Hash: " + board.getHash());
+        board.play(ALL_MOVES.get("B7B6"));
+        System.out.println("Zobrist Hash: " + board.getHash());
+        board.play(ALL_MOVES.get("B7B6"));
+        System.out.println("Zobrist Hash: " + board.getHash());
+
+        board.undo();
+
+        System.out.println("Zobrist Hash: " + board.getHash());
 
         hash ^= ZobristHash.getHashForPosition(0, 0, BLACK_PUSHER);
 
-        System.out.println("Zobrist Hash: " + hash);
+        System.out.println("Zobrist Hash: " + board.getHash());
 
         hash ^= ZobristHash.getHashForPosition(0, 0, BLACK_PUSHER);
 
