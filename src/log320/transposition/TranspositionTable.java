@@ -2,9 +2,12 @@ package log320.transposition;
 
 import log320.entities.Move;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 // https://adamberent.com/transposition-table-and-zobrist-hashing/
 public class TranspositionTable {
-    private final Entry[] ENTRIES = new Entry[1 << 20];
+    private final Map<Long, Entry> table = new ConcurrentHashMap<>();
 
     public static class Entry {
         public int depth;
@@ -21,14 +24,10 @@ public class TranspositionTable {
     }
 
     public Entry get(long hash) {
-        return ENTRIES[getIndex(hash)];
+        return table.get(hash);
     }
 
     public void put(long hash, int depth, int score, NodeType type, Move bestMove) {
-        ENTRIES[getIndex(hash)] = new Entry(depth, score, type, bestMove);
-    }
-
-    private int getIndex(long hash) {
-        return Math.floorMod(hash, ENTRIES.length);
+        table.put(hash, new Entry(depth, score, type, bestMove));
     }
 }

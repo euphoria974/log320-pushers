@@ -379,111 +379,28 @@ public class Board {
         return false;
     }
 
-    public boolean isRowCovered(Player player, int row) {
-        Boolean[] covered = new Boolean[8];
-        Arrays.fill(covered, false);
-
-        int checkRow = row - player.getDirection();
-        if (checkRow < 0 || checkRow > 7) {
-            return false;
-        }
-
-        // Get the row as a bitboard
-        long rowMask = 0xFFL << (checkRow * 8);
-        long playerPushers = player == Player.RED ? redPushers : blackPushers;
-        long playerPawns = player == Player.RED ? redPawns : blackPawns;
-
-        // Check pushers in the row
-        long pushersInRow = playerPushers & rowMask;
-        while (pushersInRow != 0) {
-            int col = Long.numberOfTrailingZeros(pushersInRow) % 8;
-
-            if (col > 0) {
-                covered[col - 1] = true;
-            }
-            if (col < 7) {
-                covered[col + 1] = true;
-            }
-
-            pushersInRow &= pushersInRow - 1;
-        }
-
-        // Check pawns in the row
-        long pawnsInRow = playerPawns & rowMask;
-        while (pawnsInRow != 0) {
-            int col = Long.numberOfTrailingZeros(pawnsInRow) % 8;
-
-            if (col > 0 && col < 7) {
-                int behindRow = checkRow - player.getDirection();
-                if (behindRow >= 0 && behindRow < 8) {
-                    long behindRowMask = 0xFFL << (behindRow * 8);
-                    long behindPushers = playerPushers & behindRowMask;
-
-                    // Check for pusher behind diagonally left
-                    long leftDiagBit = 1L << (behindRow * 8 + col - 1);
-                    if ((behindPushers & leftDiagBit) != 0) {
-                        covered[col + 1] = true;
-                    }
-
-                    // Check for pusher behind diagonally right
-                    long rightDiagBit = 1L << (behindRow * 8 + col + 1);
-                    if ((behindPushers & rightDiagBit) != 0) {
-                        covered[col - 1] = true;
-                    }
-                }
-            }
-
-            pawnsInRow &= pawnsInRow - 1;
-            pawnsInRow &= pawnsInRow - 1;
-        }
-
-        return Arrays.stream(covered).allMatch(c -> c);
-    }
-
-    public boolean canEat(Player player, int piece, int row, int col) {
+    public boolean canEat(Player player, boolean onlyPushers, int row, int col) {
         int rowToCheck = row + player.getDirection();
 
         if (rowToCheck < 0 || rowToCheck > 7) {
             return false;
         }
 
-        // Convert piece type to bitboard
-        long pieceBitboard;
-        switch (piece) {
-            case RED_PUSHER:
-                pieceBitboard = redPushers;
-                break;
-            case RED_PAWN:
-                pieceBitboard = redPawns;
-                break;
-            case BLACK_PUSHER:
-                pieceBitboard = blackPushers;
-                break;
-            case BLACK_PAWN:
-                pieceBitboard = blackPawns;
-                break;
-            default:
-                return false;
-        }
+        long opponentPieces = player.getOpponent() == Player.RED ?
+                (onlyPushers ? redPushers : allReds()) :
+                (onlyPushers ? blackPushers : allBlacks());
+
+        int leftCol = col - 1;
+        int rightCol = col + 1;
 
         // Check left diagonal
-        int leftColToCheck = col - 1;
-        if (leftColToCheck >= 0) {
-            int leftIndex = rowToCheck * 8 + leftColToCheck;
-            long leftBit = 1L << leftIndex;
-            if ((pieceBitboard & leftBit) != 0) {
-                return true;
-            }
+        if (leftCol >= 0 && ((opponentPieces & (1L << (rowToCheck * 8 + leftCol))) != 0)) {
+            return true;
         }
 
         // Check right diagonal
-        int rightColToCheck = col + 1;
-        if (rightColToCheck < 8) {
-            int rightIndex = rowToCheck * 8 + rightColToCheck;
-            long rightBit = 1L << rightIndex;
-            if ((pieceBitboard & rightBit) != 0) {
-                return true;
-            }
+        if (rightCol < 8 && ((opponentPieces & (1L << (rowToCheck * 8 + rightCol))) != 0)) {
+            return true;
         }
 
         return false;
@@ -546,9 +463,8 @@ public class Board {
         return EMPTY;
     }
 
-    public boolean hasPusherAt(int index) {
-        long bit = 1L << index;
-        return ((redPushers | blackPushers) & bit) != 0;
+    public List<Move> getNoisyMoves(Player player) {
+        return getPossibleMoves(player).stream().filter(move -> canEat(player, true, move.getFrom() / 8, move.getFrom() % 8)).toList();
     }
 
     public long allReds() {

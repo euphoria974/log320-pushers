@@ -29,13 +29,6 @@ public class MoveComparator implements Comparator<Move> {
         int fromIndex = move.getFrom();
         int toRow = toIndex / 8;
         int toCol = toIndex % 8;
-        int fromRow = fromIndex / 8;
-        int fromCol = fromIndex % 8;
-
-        // protection de la ligne gagnante
-        if (fromRow == PLAYER.getOpponent().getWinningRow() && (fromCol == 1 || fromCol == 2 || fromCol == 5 || fromCol == 6)) {
-            return Integer.MIN_VALUE;
-        }
 
         int destPiece = BOARD.get(toIndex);
         int score = 0;
@@ -55,19 +48,6 @@ public class MoveComparator implements Comparator<Move> {
         // Près de la victoire
         int distanceToWinningRow = Math.abs(toRow - PLAYER.getWinningRow());
         score += 10 * (7 - distanceToWinningRow);
-
-        // pushers alignés
-        if (toRow < 7 && toRow > 0) {
-            int checkIndex = toIndex + (PLAYER.getDirection() * 8);
-            if (BOARD.hasPusherAt(checkIndex)) {
-                score += 100;
-            }
-        }
-
-        // bonus centre (mobilité)
-        if (fromCol > 1 && fromCol < 6) {
-            score += 50;
-        }
 
         return score;
     }

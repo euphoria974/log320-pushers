@@ -2,6 +2,7 @@ package tests;
 
 import log320.entities.Player;
 import log320.game.Board;
+import log320.game.Game;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -51,14 +52,6 @@ public class BoardTest {
         System.out.println("isRowCovered: >>");
         board.init();
 
-        System.out.println(board.isRowCovered(Player.RED, 1)); // true
-        System.out.println(board.isRowCovered(Player.RED, 2)); // true
-        System.out.println(board.isRowCovered(Player.RED, 3)); // false
-
-        System.out.println(board.isRowCovered(Player.BLACK, 6)); // true
-        System.out.println(board.isRowCovered(Player.BLACK, 5)); // true
-        System.out.println(board.isRowCovered(Player.BLACK, 4));  // false
-
         // ---------------
 
         Path path = Paths.get("boardStates", "test7.brd");
@@ -90,18 +83,17 @@ public class BoardTest {
         }
 
         // ---
-        Board tes = new Board(
-                "2 2 0 0 2 2 0 2 " +
-                        "1 1 2 1 2 2 0 0 " +
-                        "0 0 0 0 1 1 1 1 " +
-                        "0 0 1 0 0 0 0 0 " +
-                        "0 0 0 3 0 0 0 0 " +
-                        "3 3 0 4 0 0 0 3 " +
-                        "0 4 3 0 3 3 3 4 " +
-                        "0 4 4 4 0 4 4 0");
-        tes.print();
+        Game newGame = new Game();
+        newGame.start("0 0 0 0 2 0 2 0 " +
+                "2 4 0 0 0 0 0 1 " +
+                "0 0 1 1 0 1 0 2 " +
+                "0 0 0 0 0 1 2 3 " +
+                "0 4 0 3 0 1 0 3 " +
+                "3 0 0 0 4 4 0 3 " +
+                "0 0 0 0 4 0 4 0 " +
+                "4 0 0 0 4 0 0 0 ", Player.RED);
 
-        System.out.println("RED possible moves:" + tes.getPossibleMoves(Player.RED));
-        System.out.println("BLACK possible moves:" + tes.getPossibleMoves(Player.BLACK));
+        String s = "B7 - B8";
+        String m = s.replaceAll("[^A-Za-z0-9]", "");
     }
 }

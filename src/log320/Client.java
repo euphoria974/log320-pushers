@@ -31,7 +31,7 @@ class Client {
                 // Debut de la partie en joueur rouge
                 if (cmd == '1') {
                     long startTime = System.currentTimeMillis();
-                    
+
                     byte[] aBuffer = new byte[1024];
                     int size = input.available();
                     input.read(aBuffer, 0, size);
@@ -97,13 +97,11 @@ class Client {
                     input.read(aBuffer, 0, size);
 
                     String s = new String(aBuffer);
-                    String m = s.replaceAll("[^A-Za-z0-9]", "");
-                    game.play(m);
 
                     System.out.println("\033[93;40mPartie Terminé. Le dernier coup joué est: " + s);
                     output.flush();
+
                     game.over();
-                    // break;
                 }
             }
         } catch (IOException e) {

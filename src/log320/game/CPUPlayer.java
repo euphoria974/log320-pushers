@@ -38,7 +38,6 @@ public class CPUPlayer {
         ExecutorService executor;
         List<Future<int[]>> futures;
 
-
         timeLoop:
         while (!isTimeExceeded(startTime)) {
             CURRENT_BEST_MOVES.clear();
@@ -128,13 +127,14 @@ public class CPUPlayer {
         }
 
         if (currentDepth >= maxDepth) {
-            return boardScore;
+            // return boardScore;
+            return quiescenceSearch(board, boardScore, alpha, beta, PLAYER, startTime);
         }
 
         int originalAlpha = alpha;
 
-        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
-        if (entry != null && entry.depth >= maxDepth) {
+        /*TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
+        if (entry != null && entry.depth >= (maxDepth - currentDepth)) {
             switch (entry.type) {
                 case EXACT:
                     return entry.score;
@@ -145,13 +145,13 @@ public class CPUPlayer {
                     if (entry.score >= beta) return entry.score;
                     break;
             }
-        }
+        }*/
 
         Player player = isMax ? PLAYER : PLAYER.getOpponent();
         List<Move> possibleMoves = board.getSortedPossibleMoves(player);
 
         Move bestMove = null;
-        if (entry != null && entry.bestMove != null) {
+        /*if (entry != null && entry.bestMove != null) {
             for (int i = 0; i < possibleMoves.size(); i++) {
                 if (possibleMoves.get(i).equals(entry.bestMove)) {
                     bestMove = possibleMoves.remove(i);
@@ -159,7 +159,7 @@ public class CPUPlayer {
                     break;
                 }
             }
-        }
+        }*/
 
         int score = isMax ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
@@ -211,6 +211,32 @@ public class CPUPlayer {
         TRANSPOSITION_TABLE.put(board.getHash(), currentDepth, score, nodeType, bestMove);
 
         return score;
+    }
+
+    private int quiescenceSearch(Board board, int standPat, int alpha, int beta, Player player, long startTime) {
+        if (isTimeExceeded(startTime)) {
+            return Integer.MIN_VALUE;
+        }
+
+        alpha = Math.max(alpha, standPat);
+
+        if (alpha >= beta) {
+            return standPat;
+        }
+
+        List<Move> noisyMoves = board.getNoisyMoves(player);
+        for (Move move : noisyMoves) {
+            board.play(move);
+            int score = quiescenceSearch(board, standPat, -beta, -alpha, player.getOpponent(), startTime);
+            board.undo();
+
+            standPat = Math.max(standPat, score);
+            alpha = Math.max(alpha, standPat);
+
+            if (alpha >= beta) break;
+        }
+
+        return standPat;
     }
 
     private boolean isTimeExceeded(long startTime) {

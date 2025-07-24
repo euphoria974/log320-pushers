@@ -9,7 +9,7 @@ import java.util.Random;
 
 public final class Const {
     // Heuristiques
-    public static final long MAX_TIME_MILLIS = 4975;
+    public static final long MAX_TIME_MILLIS = 4775;
     public static final int WIN_SCORE = 1000000000;
     public static final int LOSS_SCORE = -1000000000;
     public static final int COL_CHAR_OFFSET = 'A';
