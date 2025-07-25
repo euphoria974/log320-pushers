@@ -8,10 +8,9 @@ import static log320.Const.WIN_SCORE;
 public class BoardEvaluator {
     private final Board BOARD;
 
-    private final int pusherScore = 50;
-    private final int pawnScore = 15;
-    private final int pusherDistanceToWinningRowScore = 3;
-    private final int nextPlayBonus = -50;
+    private final int pusherScore = 51;
+    private final int pawnScore = 13;
+    private final int pusherDistanceToWinningRowScore = 5;
 
     public BoardEvaluator(Board board) {
         this.BOARD = board;
@@ -39,7 +38,7 @@ public class BoardEvaluator {
         int score = (pusherScore * (Long.bitCount(BOARD.getRedPushers()) - Long.bitCount(BOARD.getBlackPushers())) +
                 pawnScore * (Long.bitCount(BOARD.getRedPawns()) - Long.bitCount(BOARD.getBlackPawns()))) * (player == Player.RED ? 1 : -1);
 
-        long pushers = (player == Player.RED) ? BOARD.getRedPushers() : BOARD.getBlackPushers();
+        /*long pushers = (player == Player.RED) ? BOARD.getRedPushers() : BOARD.getBlackPushers();
         long oppPushers = (player == Player.RED) ? BOARD.getBlackPushers() : BOARD.getRedPushers();
 
         for (long bits = pushers; bits != 0; bits &= bits - 1) {
@@ -52,8 +51,8 @@ public class BoardEvaluator {
             int idx = Long.numberOfTrailingZeros(bits);
             int row = idx / 8;
             score -= pusherDistanceToWinningRowScore * Math.abs(row - player.getOpponent().getWinningRow());
-        }
+        }*/
 
-        return score + nextPlayBonus;
+        return score;
     }
 }

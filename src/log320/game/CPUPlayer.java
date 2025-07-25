@@ -45,6 +45,17 @@ public class CPUPlayer {
             executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             futures = new ArrayList<>();
 
+            if (!BEST_MOVES.isEmpty()) {
+                for (int i = BEST_MOVES.size() - 1; i >= 0; i--) {
+                    Move best = BEST_MOVES.get(i);
+                    int idx = possibleMoves.indexOf(best);
+                    if (idx > 0) {
+                        possibleMoves.remove(idx);
+                        possibleMoves.addFirst(best);
+                    }
+                }
+            }
+
             for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
                 Move move = possibleMoves.get(moveIndex);
                 Board boardCopy = BOARD.clone(move);
@@ -127,14 +138,14 @@ public class CPUPlayer {
         }
 
         if (currentDepth >= maxDepth) {
-            // return boardScore;
-            return quiescenceSearch(board, boardScore, alpha, beta, PLAYER, startTime);
+            return quiescenceSearch(board, alpha, beta, PLAYER, startTime);
         }
 
+        int remainingDepth = maxDepth - currentDepth;
         int originalAlpha = alpha;
 
-        /*TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
-        if (entry != null && entry.depth >= (maxDepth - currentDepth)) {
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
+        if (entry != null && entry.depth >= remainingDepth) {
             switch (entry.type) {
                 case EXACT:
                     return entry.score;
@@ -145,13 +156,13 @@ public class CPUPlayer {
                     if (entry.score >= beta) return entry.score;
                     break;
             }
-        }*/
+        }
 
         Player player = isMax ? PLAYER : PLAYER.getOpponent();
         List<Move> possibleMoves = board.getSortedPossibleMoves(player);
 
         Move bestMove = null;
-        /*if (entry != null && entry.bestMove != null) {
+        if (entry != null && entry.bestMove != null) {
             for (int i = 0; i < possibleMoves.size(); i++) {
                 if (possibleMoves.get(i).equals(entry.bestMove)) {
                     bestMove = possibleMoves.remove(i);
@@ -159,7 +170,7 @@ public class CPUPlayer {
                     break;
                 }
             }
-        }*/
+        }
 
         int score = isMax ? Integer.MIN_VALUE : Integer.MAX_VALUE;
 
@@ -208,35 +219,41 @@ public class CPUPlayer {
             nodeType = NodeType.EXACT;
         }
 
-        TRANSPOSITION_TABLE.put(board.getHash(), currentDepth, score, nodeType, bestMove);
+        TRANSPOSITION_TABLE.put(board.getHash(), remainingDepth, score, nodeType, bestMove);
 
         return score;
     }
 
-    private int quiescenceSearch(Board board, int standPat, int alpha, int beta, Player player, long startTime) {
+    private int quiescenceSearch(Board board, int alpha, int beta, Player player, long startTime) {
         if (isTimeExceeded(startTime)) {
             return Integer.MIN_VALUE;
         }
 
-        alpha = Math.max(alpha, standPat);
+        int eval = board.evaluate(player);
 
-        if (alpha >= beta) {
-            return standPat;
+        if (eval >= beta) {
+            return beta;
         }
 
-        List<Move> noisyMoves = board.getNoisyMoves(player);
-        for (Move move : noisyMoves) {
+        if (eval > alpha) {
+            alpha = eval;
+        }
+
+        for (Move move : board.getNoisyMoves(player)) {
             board.play(move);
-            int score = quiescenceSearch(board, standPat, -beta, -alpha, player.getOpponent(), startTime);
+            int score = -quiescenceSearch(board, -beta, -alpha, player.getOpponent(), startTime);
             board.undo();
 
-            standPat = Math.max(standPat, score);
-            alpha = Math.max(alpha, standPat);
+            if (score >= beta) {
+                return beta;
+            }
 
-            if (alpha >= beta) break;
+            if (score > alpha) {
+                alpha = score;
+            }
         }
 
-        return standPat;
+        return alpha;
     }
 
     private boolean isTimeExceeded(long startTime) {
