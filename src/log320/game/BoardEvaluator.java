@@ -38,6 +38,16 @@ public class BoardEvaluator {
         int score = (pusherScore * (Long.bitCount(BOARD.getRedPushers()) - Long.bitCount(BOARD.getBlackPushers())) +
                 pawnScore * (Long.bitCount(BOARD.getRedPawns()) - Long.bitCount(BOARD.getBlackPawns()))) * (player == Player.RED ? 1 : -1);
 
+        /*long playerPushers = (player == Player.RED) ? BOARD.getRedPushers() : BOARD.getBlackPushers();
+        for (long bits = playerPushers; bits != 0; bits &= bits - 1) {
+            int idx = Long.numberOfTrailingZeros(bits);
+            int row = idx / 8;
+            int col = idx % 8;
+            if (BOARD.isExposed(player, row, col)) {
+                score -= 1000; // Adjust penalty as needed
+            }
+        }*/
+
         /*long pushers = (player == Player.RED) ? BOARD.getRedPushers() : BOARD.getBlackPushers();
         long oppPushers = (player == Player.RED) ? BOARD.getBlackPushers() : BOARD.getRedPushers();
 
