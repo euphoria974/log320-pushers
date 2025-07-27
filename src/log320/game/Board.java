@@ -283,12 +283,12 @@ public class Board {
 
             // diaognal gauche << 7
             long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
-            long diagLeftTo = (diagLeftPawns << 7) & ~occ & ~MASK_COL_H;
+            long diagLeftTo = (diagLeftPawns << 7) & ~redPieces & ~MASK_COL_H;
             possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, 7));
 
             // diaognal droite << 9
             long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
-            long diagRightTo = (diagRightPawns << 9) & ~occ & ~MASK_COL_A;
+            long diagRightTo = (diagRightPawns << 9) & ~redPieces & ~MASK_COL_A;
             possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, 9));
         } else {
             // down >> 8
