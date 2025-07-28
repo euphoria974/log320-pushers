@@ -20,6 +20,8 @@ public class CPUPlayer {
     private final ArrayList<Move> CURRENT_BEST_MOVES = new ArrayList<>(20);
     private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
+    private final int[][] historyTable = new int[64][64];
+
     public CPUPlayer(Board board, Player player) {
         this.BOARD = board;
         this.PLAYER = player;
@@ -157,7 +159,7 @@ public class CPUPlayer {
         int remainingDepth = maxDepth - currentDepth;
         int originalAlpha = alpha;
 
-        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash(), player);
         if (entry != null && entry.depth >= remainingDepth) {
             switch (entry.type) {
                 case EXACT:
@@ -171,7 +173,7 @@ public class CPUPlayer {
             }
         }
 
-        List<Move> possibleMoves = board.getSortedPossibleMoves(player);
+        List<Move> possibleMoves = board.getSortedPossibleMoves(player, historyTable);
 
         Move bestMove = null;
         if (entry != null && entry.bestMove != null) {
@@ -200,6 +202,10 @@ public class CPUPlayer {
                 alpha = Math.max(alpha, score);
 
                 if (alpha >= beta) {
+                    if (bestMove != null) {
+                        historyTable[bestMove.getFrom()][bestMove.getTo()] += remainingDepth * remainingDepth;
+                    }
+
                     break;
                 }
             }
@@ -231,7 +237,7 @@ public class CPUPlayer {
             nodeType = NodeType.EXACT;
         }
 
-        TRANSPOSITION_TABLE.put(board.getHash(), remainingDepth, score, nodeType, bestMove);
+        TRANSPOSITION_TABLE.put(board.getHash(), player, remainingDepth, score, nodeType, bestMove);
 
         return score;
     }

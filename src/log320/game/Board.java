@@ -254,6 +254,16 @@ public class Board {
         return possibleMoves;
     }
 
+    public ArrayList<Move> getSortedPossibleMoves(Player player, int[][] historyTable) {
+        ArrayList<Move> possibleMoves = getPossibleMoves(player);
+        possibleMoves.sort((m1, m2) -> {
+            int score1 = historyTable[m1.getFrom()][m1.getTo()];
+            int score2 = historyTable[m2.getFrom()][m2.getTo()];
+            return Integer.compare(score2, score1); // Sort in descending order
+        });
+        return possibleMoves;
+    }
+
     public ArrayList<Move> getPossibleMoves(Player player) {
         ArrayList<Move> possibleMoves = new ArrayList<>(32);
 

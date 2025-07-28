@@ -6,7 +6,6 @@ import log320.game.CPUPlayer;
 
 public class BoardTest {
     public static void main(String[] args) {
-        // TODO why the fuck is this returning an unsafe move???
         Board black = new Board("0 0 0 0 0 0 0 0 " +
                 "0 0 0 0 0 0 0 0 " +
                 "0 0 2 0 0 0 0 0 " +
