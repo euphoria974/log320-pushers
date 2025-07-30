@@ -501,41 +501,7 @@ public class Board {
         }
     }
 
-    public boolean isPawnActivated(Player player, int row, int col) {
-        int backRow = row - player.getDirection();
-
-        if (backRow < 0 || backRow > 7) {
-            return false;
-        }
-
-        long playerPushers = player == Player.RED ? redPushers : blackPushers;
-
-        // Check for pusher directly behind
-        long behindBit = 1L << (backRow * 8 + col);
-        if ((playerPushers & behindBit) != 0) {
-            return true;
-        }
-
-        // Check for pusher behind diagonally left
-        if (col > 0) {
-            long leftDiagBit = 1L << (backRow * 8 + col - 1);
-            if ((playerPushers & leftDiagBit) != 0) {
-                return true;
-            }
-        }
-
-        // Check for pusher behind diagonally right
-        if (col < 7) {
-            long rightDiagBit = 1L << (backRow * 8 + col + 1);
-            if ((playerPushers & rightDiagBit) != 0) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public boolean canEat(Player player, boolean onlyPushers, int row, int col) {
+    public boolean canEat(Player player, int row, int col) {
         int rowToCheck = row + player.getDirection();
 
         if (rowToCheck < 0 || rowToCheck > 7) {
@@ -543,8 +509,8 @@ public class Board {
         }
 
         long opponentPieces = player.getOpponent() == Player.RED ?
-                (onlyPushers ? redPushers : allReds()) :
-                (onlyPushers ? blackPushers : allBlacks());
+                redPushers :
+                blackPushers;
 
         int leftCol = col - 1;
         int rightCol = col + 1;
@@ -592,24 +558,6 @@ public class Board {
         }
     }
 
-    public int get(int row, int col) {
-        int index = row * 8 + col;
-        long bit = 1L << index;
-
-        // Check each bitboard to see which piece is at this position
-        if ((redPushers & bit) != 0) {
-            return RED_PUSHER;
-        } else if ((redPawns & bit) != 0) {
-            return RED_PAWN;
-        } else if ((blackPushers & bit) != 0) {
-            return BLACK_PUSHER;
-        } else if ((blackPawns & bit) != 0) {
-            return BLACK_PAWN;
-        } else {
-            return EMPTY;
-        }
-    }
-
     public int get(int index) {
         long bit = 1L << index;
         if ((redPushers & bit) != 0) return RED_PUSHER;
@@ -620,7 +568,7 @@ public class Board {
     }
 
     public List<Move> getNoisyMoves(Player player) {
-        return getPossibleMoves(player).stream().filter(move -> canEat(player, true, move.getFrom() / 8, move.getFrom() % 8)).toList();
+        return getPossibleMoves(player).stream().filter(move -> canEat(player, move.getFrom() / 8, move.getFrom() % 8)).toList();
     }
 
     public long allReds() {
