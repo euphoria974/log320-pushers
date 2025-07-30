@@ -235,7 +235,7 @@ public class Board {
         moveStatePoolIndex--;
     }
 
-    private final int pusherScore = 141;
+    private final int pusherScore = 173;
     private final int pawnScore = 37;
     private final int backedPusherScore = 23;
     private final int halfBoardScore = 41;
