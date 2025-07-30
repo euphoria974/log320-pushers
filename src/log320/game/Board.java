@@ -235,10 +235,11 @@ public class Board {
         moveStatePoolIndex--;
     }
 
-    private final int pusherScore = 173;
-    private final int pawnScore = 37;
-    private final int backedPusherScore = 23;
-    private final int halfBoardScore = 59;
+    private final int pusherWeight = 185;
+    private final int pawnWeight = 37;
+    private final int backedPusherWeight = 51;
+    private final int halfBoardWeight = 59;
+    private final int mobilityWeight = 25;
 
     public int evaluate(Player player) {
         long myPushers = player == Player.RED ? getRedPushers() : getBlackPushers();
@@ -251,11 +252,13 @@ public class Board {
 
         int backedPushers = getBackedPushers(player) - getBackedPushers(player.getOpponent());
         int halfBoard = getHalfBoardScore(player) - getHalfBoardScore(player.getOpponent());
+        int mobility = getPossibleMovesSize(player) - getPossibleMovesSize(player.getOpponent());
 
-        return pusherScore * pushersDiff +
-                pawnScore * pawnsDiff +
-                backedPusherScore * backedPushers +
-                halfBoardScore * halfBoard;
+        return pusherWeight * pushersDiff +
+                pawnWeight * pawnsDiff +
+                backedPusherWeight * backedPushers +
+                halfBoardWeight * halfBoard +
+                mobilityWeight * mobility;
     }
 
     private int getBackedPushers(Player player) {
@@ -395,6 +398,75 @@ public class Board {
         return possibleMoves;
     }
 
+    public int getPossibleMovesSize(Player player) {
+        int size = 0;
+
+        long occ = occupied();
+        long blackPieces = allBlacks();
+        long redPieces = allReds();
+
+        if (player == Player.RED) {
+            // Pushers
+            // up << 8
+            long pusherForward = (redPushers << 8) & ~occ;
+            size += generateMovesFromBitboardSize(pusherForward, 8);
+
+            // diaognal gauche << 7
+            long pusherDiagLeft = ((redPushers & ~MASK_COL_A) << 7) & ~redPieces;
+            size += generateMovesFromBitboardSize(pusherDiagLeft, 7);
+
+            // diaognal droite << 9
+            long pusherDiagRight = ((redPushers & ~MASK_COL_H) << 9) & ~redPieces;
+            size += generateMovesFromBitboardSize(pusherDiagRight, 9);
+
+            // Pions
+            // up << 8
+            long forwardPawns = redPawns & (redPushers << 8);
+            long forwardTo = (forwardPawns << 8) & ~occ;
+            size += generateMovesFromBitboardSize(forwardTo, 8);
+
+            // diaognal gauche << 7
+            long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
+            long diagLeftTo = (diagLeftPawns << 7) & ~redPieces & ~MASK_COL_H;
+            size += generateMovesFromBitboardSize(diagLeftTo, 7);
+
+            // diaognal droite << 9
+            long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
+            long diagRightTo = (diagRightPawns << 9) & ~redPieces & ~MASK_COL_A;
+            size += generateMovesFromBitboardSize(diagRightTo, 9);
+        } else {
+            // down >> 8
+            long pusherForward = (blackPushers >> 8) & ~occ & ~(0xFFL << 56);
+            size += generateMovesFromBitboardSize(pusherForward, -8);
+
+            // diagonal droite >> 7
+            long pusherDiagRight = ((blackPushers & ~MASK_COL_H) >> 7) & ~blackPieces;
+            size += generateMovesFromBitboardSize(pusherDiagRight, -7);
+
+            // diagonal gauche >> 9
+            long pusherDiagLeft = ((blackPushers & ~MASK_COL_A) >> 9) & ~blackPieces & 0x007F7F7F7F7F7F7FL;
+            size += generateMovesFromBitboardSize(pusherDiagLeft, -9);
+
+            // Pions
+            // up >> 8
+            long forwardPawns = blackPawns & (blackPushers >> 8); // pushers directly behind
+            long forwardTo = (forwardPawns >> 8) & ~occ; // destination must be empty
+            size += generateMovesFromBitboardSize(forwardTo, -8);
+
+            // diaognal gauche >> 7
+            long diagLeftPawns = (blackPawns & ~MASK_COL_A) & ((blackPushers & ~MASK_COL_H) >> 7);
+            long diagLeftTo = (diagLeftPawns >> 7) & ~blackPieces & ~MASK_COL_A;
+            size += generateMovesFromBitboardSize(diagLeftTo, -7);
+
+            // diaognal droite >> 9
+            long diagRightPawns = (blackPawns & ~MASK_COL_H) & ((blackPushers & ~MASK_COL_A) >> 9);
+            long diagRightTo = (diagRightPawns >> 9) & ~blackPieces & ~MASK_COL_H;
+            size += generateMovesFromBitboardSize(diagRightTo, -9);
+        }
+
+        return size;
+    }
+
     private ArrayList<Move> generateMovesFromBitboard(long toBits, int shift) {
         ArrayList<Move> moves = new ArrayList<>();
 
@@ -406,6 +478,19 @@ public class Board {
         }
 
         return moves;
+    }
+
+    private int generateMovesFromBitboardSize(long toBits, int shift) {
+        int size = 0;
+
+        while (toBits != 0) {
+            int toIndex = Long.numberOfTrailingZeros(toBits);
+            int fromIndex = toIndex - shift;
+            size++;
+            toBits &= toBits - 1;
+        }
+
+        return size;
     }
 
     public boolean hasPlayerWon(Player player) {
