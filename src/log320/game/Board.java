@@ -495,9 +495,9 @@ public class Board {
 
     public boolean hasPlayerWon(Player player) {
         if (player == Player.RED) {
-            return (redPushers & 0xFF00000000000000L) != 0 || blackPushers == 0L;
+            return (allReds() & 0xFF00000000000000L) != 0 || blackPushers == 0L;
         } else {
-            return (blackPushers & 0x00000000000000FFL) != 0 || redPushers == 0L;
+            return (allBlacks() & 0x00000000000000FFL) != 0 || redPushers == 0L;
         }
     }
 
