@@ -22,12 +22,18 @@ public class Game {
     public Move getNextMove() {
         Move move = cpuPlayer.getNextMove();
         board.play(move);
+        Player winner = board.getWinner();
+        if (winner != null) {
+            System.out.println("gagnant: "+ winner);
+        }
         return move;
     }
 
     public void play(String moveString) {
         Move move = ALL_MOVES.get(moveString);
         board.play(move);
+
+
     }
 
     public void printBoard() {

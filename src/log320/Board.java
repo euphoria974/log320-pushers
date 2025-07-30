@@ -233,4 +233,19 @@ public class Board {
                 get(backRow, col) == player.getPusher() ||
                 (col < 7 && get(backRow, col + 1) == player.getPusher());
     }
+    public Player getWinner() {
+        for (int col = 0; col < 8; col++) {
+            int redPiece = get(Player.RED.getWinningRow(), col);
+            if (redPiece == Player.RED.getPawn() || redPiece == Player.RED.getPusher()) {
+                return Player.RED;
+            }
+
+            int blackPiece = get(Player.BLACK.getWinningRow(), col);
+            if (blackPiece == Player.BLACK.getPawn() || blackPiece == Player.BLACK.getPusher()) {
+                return Player.BLACK;
+            }
+        }
+        return null; // pas de vainqueur
+    }
+
 }

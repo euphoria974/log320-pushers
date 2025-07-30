@@ -7,40 +7,41 @@ import static log320.Const.*;
 public class BoardEvaluator {
     private final Board BOARD;
 
+    // Bonus topologique : favorise les bords (A-B et G-H)
+    private static final int[] COLUMN_BONUS = { 4, 2, 0, 0, 0, 0, 2, 4 };
+
     public BoardEvaluator(Board board) {
         this.BOARD = board;
     }
 
     public int evaluate(Player player) {
-        // Peux manger safement un pusher: +120
-        // Peux manger safement un pion: +60
-        // Peux manger mais perte d'un pion: +50
-        // Peux manger mais perte d'un pusher: -60
-        // Pion en danger mais peux manger: +130 (sacrifice)
-        // Bloque un pusher adverse: +200
-
         int score = 0;
         int playerPushers = 0;
         int opponentPushers = 0;
 
         for (int col = 0; col < 8; col++) {
-            if (BOARD.get(player.getWinningRow(), col) == player.getPawn() || BOARD.get(player.getWinningRow(), col) == player.getPusher())
+            // Victoire immédiate ?
+            if (BOARD.get(player.getWinningRow(), col) == player.getPawn()
+                    || BOARD.get(player.getWinningRow(), col) == player.getPusher())
                 return WIN_SCORE;
-            if (BOARD.get(player.getOpponent().getWinningRow(), col) == player.getOpponent().getPawn() || BOARD.get(player.getOpponent().getWinningRow(), col) == player.getOpponent().getPusher())
+
+            if (BOARD.get(player.getOpponent().getWinningRow(), col) == player.getOpponent().getPawn()
+                    || BOARD.get(player.getOpponent().getWinningRow(), col) == player.getOpponent().getPusher())
                 return LOSS_SCORE;
 
             for (int row = 0; row < 8; row++) {
-                if (BOARD.get(row, col) == player.getPusher()) {
+                int cell = BOARD.get(row, col);
+
+                // Pousseur du joueur
+                if (cell == player.getPusher()) {
                     playerPushers++;
                     score += 25;
+                    score += COLUMN_BONUS[col];  // Bonus bord
 
-                    /* TODO
-                    if (BOARD.canEat(getBoard(), player, row, col)) {
-                        score += 55;
-                    } */
-
-                    if (row > 1 && row < 6 && BOARD.get(row + player.getDirection() + player.getDirection(), col) == player.getOpponent().getPusher() && BOARD.get(row + player.getDirection(), col) == EMPTY) {
-                        score += 200;
+                    if (row > 1 && row < 6
+                            && BOARD.get(row + player.getDirection() + player.getDirection(), col) == player.getOpponent().getPusher()
+                            && BOARD.get(row + player.getDirection(), col) == EMPTY) {
+                        score += 200; // blocage utile
                     }
 
                     if (BOARD.isExposed(player, row, col)) {
@@ -49,28 +50,62 @@ public class BoardEvaluator {
 
                     int distanceToWinningRow = 10 * Math.abs(row - player.getWinningRow());
                     score += distanceToWinningRow;
-                } else if (BOARD.get(row, col) == player.getOpponent().getPusher()) {
+                }
+
+                // Pousseur adverse
+                else if (cell == player.getOpponent().getPusher()) {
                     opponentPushers++;
                     int distanceToWinningRow = 10 * Math.abs(row - player.getOpponent().getWinningRow());
                     score -= distanceToWinningRow;
-                } else if (BOARD.get(row, col) == player.getPawn()) {
-                    score += 10;
+                }
 
-                    /* TODO
-                    if (BOARD.canEat(player, row, col)) {
-                        score += 100;
-                    }
-                     */
+                // Pion du joueur
+                else if (cell == player.getPawn()) {
+                    score += 10;
+                    score += COLUMN_BONUS[col];
 
                     if (BOARD.isExposed(player, row, col)) {
                         score -= 25;
                     }
 
                     if (BOARD.isPawnActivated(player, row, col)) {
-                        int distanceToWinningRow = 8 * Math.abs(row - player.getWinningRow());
-                        score += distanceToWinningRow;
+                        boolean weakColumn = true;
+                        for (int r = row + player.getDirection(); r != row + 4 * player.getDirection(); r += player.getDirection()) {
+                            if (r < 0 || r >= 8) break;
+                            int enemy = BOARD.get(r, col);
+                            if (enemy == player.getOpponent().getPawn() || enemy == player.getOpponent().getPusher()) {
+                                weakColumn = false;
+                                break;
+                            }
+                        }
+                        if (weakColumn) {
+                            score += 100; // Percée possible ! exploiter la faiblesse
+                        }
                     }
-                } else if (BOARD.get(row, col) == player.getOpponent().getPawn()) {
+
+
+                    // Pénalité souple pour pion isolé (plus doux qu'avant)
+                    boolean hasNearbyPusher = false;
+                    for (int dRow = 1; dRow <= 2; dRow++) {
+                        int checkRow = row - player.getDirection() * dRow;
+                        for (int dCol = -1; dCol <= 1; dCol++) {
+                            int checkCol = col + dCol;
+                            if (checkRow >= 0 && checkRow < 8 && checkCol >= 0 && checkCol < 8) {
+                                if (BOARD.get(checkRow, checkCol) == player.getPusher()) {
+                                    hasNearbyPusher = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (hasNearbyPusher) break;
+                    }
+                    if (!hasNearbyPusher) {
+                        score -= 5; // Poussé légèrement isolé
+                    }
+                }
+
+                // Pion adverse activé
+                else if (cell == player.getOpponent().getPawn()) {
                     if (BOARD.isPawnActivated(player, row, col)) {
                         int distanceToWinningRow = 8 * Math.abs(row - player.getOpponent().getWinningRow());
                         score -= distanceToWinningRow;
@@ -79,30 +114,24 @@ public class BoardEvaluator {
             }
         }
 
-        if (opponentPushers == 0) {
-            return WIN_SCORE;
-        }
-
-        if (playerPushers == 0) {
-            return LOSS_SCORE;
-        }
+        if (opponentPushers == 0) return WIN_SCORE;
+        if (playerPushers == 0) return LOSS_SCORE;
 
         score += 100 * (playerPushers - opponentPushers);
 
         List<Move> myMoves = BOARD.getPossibleMoves(player);
         List<Move> opponentMoves = BOARD.getPossibleMoves(player.getOpponent());
-
         score += (myMoves.size() - opponentMoves.size()) * 3;
 
         if (BOARD.isRowCovered(player, player.getOpponent().getWinningRow() + player.getDirection())) {
             score += 900;
         }
 
-        if (BOARD.isRowCovered(player, player.getOpponent().getWinningRow() + player.getDirection() + player.getDirection())) {
+        if (BOARD.isRowCovered(player, player.getOpponent().getWinningRow() + 2 * player.getDirection())) {
             score += 700;
         }
 
-        if (BOARD.isRowCovered(player, player.getOpponent().getWinningRow() + player.getDirection() + player.getDirection() + player.getDirection())) {
+        if (BOARD.isRowCovered(player, player.getOpponent().getWinningRow() + 3 * player.getDirection())) {
             score += 300;
         }
 
