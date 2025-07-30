@@ -1,7 +1,6 @@
 package log320.transposition;
 
 import log320.entities.Move;
-import log320.entities.Player;
 
 // https://adamberent.com/transposition-table-and-zobrist-hashing/
 public class TranspositionTable {
@@ -33,15 +32,13 @@ public class TranspositionTable {
         }
     }
 
-    public Entry get(long hash, Player player) {
-        hash ^= ZobristHash.getHashForPlayer(player);
+    public Entry get(long hash) {
         Entry entry = ENTRIES[indexOf(hash)];
         if (entry == null || entry.type == null) return null;
         return entry.hash == hash && entry.age == age ? entry : null;
     }
 
-    public void put(long hash, Player player, int depth, int score, NodeType type, Move bestMove) {
-        hash ^= ZobristHash.getHashForPlayer(player);
+    public void put(long hash, int depth, int score, NodeType type, Move bestMove) {
         Entry entry = ENTRIES[indexOf(hash)];
 
         if (entry.depth < depth) {
@@ -50,8 +47,7 @@ public class TranspositionTable {
     }
 
     public void incrementAge() {
-        // TODO Not sure this is needed
-        // age++;
+        age++;
     }
 
     private int indexOf(long hash) {

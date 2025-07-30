@@ -20,16 +20,11 @@ public class CPUPlayer {
     private final ArrayList<Move> CURRENT_BEST_MOVES = new ArrayList<>(20);
     private final TranspositionTable TRANSPOSITION_TABLE = new TranspositionTable();
 
-    private final int[][] historyTable = new int[64][64];
-
     public CPUPlayer(Board board, Player player) {
         this.BOARD = board;
         this.PLAYER = player;
     }
 
-    // Retourne la liste des coups possibles. Cette liste contient
-    // plusieurs coups possibles si et seulement si plusieurs coups
-    // ont le même score.
     public Move getNextMove() {
         long startTime = System.currentTimeMillis();
         BEST_MOVES.clear();
@@ -67,9 +62,9 @@ public class CPUPlayer {
                 final int idx = moveIndex;
                 int finalMaxDepth = maxDepth;
                 futures.add(executor.submit(() -> {
-                    int score = alphaBeta(
+                    int score = -negamax(
                             boardCopy,
-                            false,
+                            PLAYER.getOpponent(),
                             Integer.MIN_VALUE,
                             Integer.MAX_VALUE,
                             1,
@@ -126,40 +121,29 @@ public class CPUPlayer {
         return BEST_MOVES.get(RANDOM.nextInt(BEST_MOVES.size()));
     }
 
-    private int alphaBeta(Board board, boolean isMax, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
+    private int negamax(Board board, Player player, int alpha, int beta, int currentDepth, int maxDepth, long startTime) {
         if (isTimeExceeded(startTime)) {
             return Integer.MIN_VALUE;
         }
 
-        int boardScore = board.evaluate(PLAYER);
+        // int boardScore = board.evaluate(player);
         // pour favoriser les coups gagnants, on soustrait le depth
-        if (boardScore >= WIN_SCORE) {
+        if (board.hasPlayerWon(player)) {
             return WIN_SCORE - currentDepth;
         }
 
-        if (boardScore <= LOSS_SCORE) {
+        if (board.hasPlayerWon(player.getOpponent())) {
             return LOSS_SCORE + currentDepth;
         }
 
-        Player player = isMax ? PLAYER : PLAYER.getOpponent();
         if (currentDepth >= maxDepth) {
-            int quiescenceScore = quiescenceSearch(board, alpha, beta, player, startTime);
-
-            if (quiescenceScore >= WIN_SCORE) {
-                return WIN_SCORE - currentDepth;
-            }
-
-            if (quiescenceScore <= LOSS_SCORE) {
-                return LOSS_SCORE + currentDepth;
-            }
-
-            return quiescenceScore;
+            return -quiescenceSearch(board, alpha, beta, player.getOpponent(), currentDepth, startTime);
         }
 
         int remainingDepth = maxDepth - currentDepth;
         int originalAlpha = alpha;
 
-        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash(), player);
+        TranspositionTable.Entry entry = TRANSPOSITION_TABLE.get(board.getHash());
         if (entry != null && entry.depth >= remainingDepth) {
             switch (entry.type) {
                 case EXACT:
@@ -173,7 +157,7 @@ public class CPUPlayer {
             }
         }
 
-        List<Move> possibleMoves = board.getSortedPossibleMoves(player, historyTable);
+        List<Move> possibleMoves = board.getSortedPossibleMoves(player);
 
         Move bestMove = null;
         if (entry != null && entry.bestMove != null) {
@@ -186,45 +170,22 @@ public class CPUPlayer {
             }
         }
 
-        int score = isMax ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        int score = Integer.MIN_VALUE;
 
-        if (isMax) {
-            for (Move move : possibleMoves) {
-                board.play(move);
-                int value = alphaBeta(board, false, alpha, beta, currentDepth + 1, maxDepth, startTime);
-                board.undo();
+        for (Move move : possibleMoves) {
+            board.play(move);
+            int value = -negamax(board, player.getOpponent(), -beta, -alpha, currentDepth + 1, maxDepth, startTime);
+            board.undo();
 
-                if (value > score) {
-                    score = value;
-                    bestMove = move;
-                }
-
-                alpha = Math.max(alpha, score);
-
-                if (alpha >= beta) {
-                    if (bestMove != null) {
-                        historyTable[bestMove.getFrom()][bestMove.getTo()] += remainingDepth * remainingDepth;
-                    }
-
-                    break;
-                }
+            if (value > score) {
+                score = value;
+                bestMove = move;
             }
-        } else {
-            for (Move move : possibleMoves) {
-                board.play(move);
-                int value = alphaBeta(board, true, alpha, beta, currentDepth + 1, maxDepth, startTime);
-                board.undo();
 
-                if (value < score) {
-                    score = value;
-                    bestMove = move;
-                }
+            alpha = Math.max(alpha, score);
 
-                beta = Math.min(beta, score);
-
-                if (beta <= alpha) {
-                    break;
-                }
+            if (alpha >= beta) {
+                break;
             }
         }
 
@@ -237,14 +198,22 @@ public class CPUPlayer {
             nodeType = NodeType.EXACT;
         }
 
-        TRANSPOSITION_TABLE.put(board.getHash(), player, remainingDepth, score, nodeType, bestMove);
+        TRANSPOSITION_TABLE.put(board.getHash(), remainingDepth, score, nodeType, bestMove);
 
         return score;
     }
 
-    public int quiescenceSearch(Board board, int alpha, int beta, Player player, long startTime) {
+    public int quiescenceSearch(Board board, int alpha, int beta, Player player, int currentDepth, long startTime) {
         if (isTimeExceeded(startTime)) {
             return Integer.MIN_VALUE;
+        }
+
+        if (board.hasPlayerWon(player)) {
+            return WIN_SCORE - currentDepth;
+        }
+
+        if (board.hasPlayerWon(player.getOpponent())) {
+            return LOSS_SCORE + currentDepth;
         }
 
         int bestValue = board.evaluate(player);
@@ -257,7 +226,7 @@ public class CPUPlayer {
 
         for (Move move : board.getNoisyMoves(player)) {
             board.play(move);
-            int value = -quiescenceSearch(board, -beta, -alpha, player.getOpponent(), startTime);
+            int value = -quiescenceSearch(board, -beta, -alpha, player.getOpponent(), currentDepth, startTime);
             board.undo();
 
             bestValue = Math.max(bestValue, value);
