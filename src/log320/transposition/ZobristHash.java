@@ -35,8 +35,8 @@ public class ZobristHash {
     private static long addPiecesHash(long hash, long piecesBoard, int piece) {
         while (piecesBoard != 0) {
             int index = Long.numberOfTrailingZeros(piecesBoard);
-            int row = index >> 3; // div 8
-            int col = index & 7;  // mod 8
+            int row = index / 8;
+            int col = index % 8;
 
             hash ^= PIECES_TABLE[row][col][piece];
             piecesBoard &= piecesBoard - 1;

@@ -98,58 +98,6 @@ public class Board {
         System.out.println("==========================");
     }
 
-    public boolean isExposed(Player player, int row, int col) {
-        int forwardRow = row + player.getDirection();
-        int doubleForwardRow = forwardRow + player.getDirection();
-
-        if (forwardRow < 0 || forwardRow > 7) {
-            return false;
-        }
-
-        // Convert positions to indices
-        int forwardIndex = forwardRow * 8 + col;
-        int doubleForwardIndex = doubleForwardRow * 8 + col;
-
-        // Get opponent pieces
-        long opponentPushers = player == Player.RED ? blackPushers : redPushers;
-        long opponentPawns = player == Player.RED ? blackPawns : redPawns;
-
-        // Check for opponent pushers at forward diagonal positions
-        if (col > 0) {
-            long leftDiagBit = 1L << (forwardIndex - 1);
-            if ((opponentPushers & leftDiagBit) != 0) {
-                return true;
-            }
-        }
-
-        if (col < 7) {
-            long rightDiagBit = 1L << (forwardIndex + 1);
-            if ((opponentPushers & rightDiagBit) != 0) {
-                return true;
-            }
-        }
-
-        // Check for opponent pawns with pushers behind them (left diagonal)
-        if (col > 1 && doubleForwardRow >= 0 && doubleForwardRow < 8) {
-            long leftPawnBit = 1L << (forwardIndex - 1);
-            long leftPusherBit = 1L << (doubleForwardIndex - 2);
-            if ((opponentPawns & leftPawnBit) != 0 && (opponentPushers & leftPusherBit) != 0) {
-                return true;
-            }
-        }
-
-        // Check for opponent pawns with pushers behind them (right diagonal)
-        if (col < 6 && doubleForwardRow >= 0 && doubleForwardRow < 8) {
-            long rightPawnBit = 1L << (forwardIndex + 1);
-            long rightPusherBit = 1L << (doubleForwardIndex + 2);
-            if ((opponentPawns & rightPawnBit) != 0 && (opponentPushers & rightPusherBit) != 0) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public Board clone() {
         Board clone = new Board();
         clone.redPushers = this.redPushers;
@@ -160,16 +108,23 @@ public class Board {
         return clone;
     }
 
+    public int getPieceFromIndex(int index) {
+        long bit = 1L << index;
+        if ((redPushers & bit) != 0) return RED_PUSHER;
+        if ((redPawns & bit) != 0) return RED_PAWN;
+        if ((blackPushers & bit) != 0) return BLACK_PUSHER;
+        if ((blackPawns & bit) != 0) return BLACK_PAWN;
+        return EMPTY;
+    }
+
     public void play(Move move) {
         lastMove = move;
 
-        // Convert indices to row/col for compatibility
         int fromRow = move.getFrom() / 8;
         int fromCol = move.getFrom() % 8;
         int toRow = move.getTo() / 8;
         int toCol = move.getTo() % 8;
 
-        // Determine which piece is being moved
         long fromBit = 1L << move.getFrom();
         long toBit = 1L << move.getTo();
 
@@ -179,22 +134,22 @@ public class Board {
         UndoMoveState ms = MOVE_STATE_POOL.get(moveStatePoolIndex++);
         MOVE_STACK.push(ms.set(redPushers, redPawns, blackPushers, blackPawns, zobristHash));
 
-        // Find the moved piece
+        // trouver la pièce qu'on bouge et l'enlever
         if ((redPushers & fromBit) != 0) {
             movedPiece = RED_PUSHER;
-            redPushers &= ~fromBit; // Remove from source
+            redPushers &= ~fromBit;
         } else if ((redPawns & fromBit) != 0) {
             movedPiece = RED_PAWN;
-            redPawns &= ~fromBit; // Remove from source
+            redPawns &= ~fromBit;
         } else if ((blackPushers & fromBit) != 0) {
             movedPiece = BLACK_PUSHER;
-            blackPushers &= ~fromBit; // Remove from source
+            blackPushers &= ~fromBit;
         } else if ((blackPawns & fromBit) != 0) {
             movedPiece = BLACK_PAWN;
-            blackPawns &= ~fromBit; // Remove from source
+            blackPawns &= ~fromBit;
         }
 
-        // Find the captured piece (if any)
+        // trouver la pièce qu'on capture et l'enlever
         if ((redPushers & toBit) != 0) {
             capturedPiece = RED_PUSHER;
             redPushers &= ~toBit;
@@ -209,6 +164,7 @@ public class Board {
             blackPawns &= ~toBit;
         }
 
+        // mettre la pièce à la nouvelle position
         if (movedPiece == RED_PUSHER) {
             redPushers |= toBit;
         } else if (movedPiece == RED_PAWN) {
@@ -219,6 +175,7 @@ public class Board {
             blackPawns |= toBit;
         }
 
+        // mettre à jour le hash
         zobristHash = ZobristHash.updateHash(zobristHash, fromRow, fromCol, movedPiece, toRow, toCol, capturedPiece);
     }
 
@@ -235,11 +192,93 @@ public class Board {
         moveStatePoolIndex--;
     }
 
-    private final int pusherWeight = 185;
-    private final int pawnWeight = 37;
-    private final int backedPusherWeight = 51;
-    private final int halfBoardWeight = 59;
-    private final int mobilityWeight = 25;
+    public ArrayList<Move> getSortedPossibleMoves(Player player) {
+        ArrayList<Move> possibleMoves = getPossibleMoves(player);
+        possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
+        return possibleMoves;
+    }
+
+    public ArrayList<Move> getPossibleMoves(Player player) {
+        ArrayList<Move> possibleMoves = new ArrayList<>(32);
+
+        long occ = occupied();
+        long blackPieces = allBlacks();
+        long redPieces = allReds();
+
+        if (player == Player.RED) {
+            // Pushers
+            // up << 8
+            long pusherForward = (redPushers << 8) & ~occ;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherForward, 8));
+
+            // diagonal gauche << 7
+            long pusherDiagLeft = ((redPushers & ~MASK_COL_A) << 7) & ~redPieces;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagLeft, 7));
+
+            // diagonal droite << 9
+            long pusherDiagRight = ((redPushers & ~MASK_COL_H) << 9) & ~redPieces;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagRight, 9));
+
+            // Pions
+            // up << 8
+            long forwardPawns = redPawns & (redPushers << 8);
+            long forwardTo = (forwardPawns << 8) & ~occ;
+            possibleMoves.addAll(generateMovesFromBitboard(forwardTo, 8));
+
+            // diagonal gauche << 7
+            long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
+            long diagLeftTo = (diagLeftPawns << 7) & ~redPieces & ~MASK_COL_H;
+            possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, 7));
+
+            // diagonal droite << 9
+            long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
+            long diagRightTo = (diagRightPawns << 9) & ~redPieces & ~MASK_COL_A;
+            possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, 9));
+        } else {
+            // Pushers
+            // down >> 8
+            long pusherForward = (blackPushers >> 8) & ~occ & ~(0xFFL << 56);
+            possibleMoves.addAll(generateMovesFromBitboard(pusherForward, -8));
+
+            // diagonal droite >> 7
+            long pusherDiagRight = ((blackPushers & ~MASK_COL_H) >> 7) & ~blackPieces;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagRight, -7));
+
+            // diagonal gauche >> 9
+            long pusherDiagLeft = ((blackPushers & ~MASK_COL_A) >> 9) & ~blackPieces & 0x007F7F7F7F7F7F7FL;
+            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagLeft, -9));
+
+            // Pions
+            // up >> 8
+            long forwardPawns = blackPawns & (blackPushers >> 8); // pushers directly behind
+            long forwardTo = (forwardPawns >> 8) & ~occ; // destination must be empty
+            possibleMoves.addAll(generateMovesFromBitboard(forwardTo, -8));
+
+            // diagonal gauche >> 7
+            long diagLeftPawns = (blackPawns & ~MASK_COL_A) & ((blackPushers & ~MASK_COL_H) >> 7);
+            long diagLeftTo = (diagLeftPawns >> 7) & ~blackPieces & ~MASK_COL_A;
+            possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, -7));
+
+            // diagonal droite >> 9
+            long diagRightPawns = (blackPawns & ~MASK_COL_H) & ((blackPushers & ~MASK_COL_A) >> 9);
+            long diagRightTo = (diagRightPawns >> 9) & ~blackPieces & ~MASK_COL_H;
+            possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, -9));
+        }
+
+        return possibleMoves;
+    }
+
+    public List<Move> getCaptureMoves(Player player) {
+        return getPossibleMoves(player).stream().filter(move -> canEat(player, move.getFrom() / 8, move.getFrom() % 8)).toList();
+    }
+
+    public boolean hasPlayerWon(Player player) {
+        if (player == Player.RED) {
+            return (allReds() & 0xFF00000000000000L) != 0 || blackPushers == 0L;
+        } else {
+            return (allBlacks() & 0x00000000000000FFL) != 0 || redPushers == 0L;
+        }
+    }
 
     public int evaluate(Player player) {
         long myPushers = player == Player.RED ? getRedPushers() : getBlackPushers();
@@ -254,11 +293,154 @@ public class Board {
         int halfBoard = getHalfBoardScore(player) - getHalfBoardScore(player.getOpponent());
         int mobility = getPossibleMovesSize(player) - getPossibleMovesSize(player.getOpponent());
 
-        return pusherWeight * pushersDiff +
-                pawnWeight * pawnsDiff +
-                backedPusherWeight * backedPushers +
-                halfBoardWeight * halfBoard +
-                mobilityWeight * mobility;
+        return PUSHER_WEIGHT * pushersDiff +
+                PAWN_WEIGHT * pawnsDiff +
+                BACKED_PUSHER_WEIGHT * backedPushers +
+                HALF_BOARD_WEIGHT * halfBoard +
+                MOBILITY_WEIGHT * mobility;
+    }
+
+    public boolean isExposed(Player player, int row, int col) {
+        int forwardRow = row + player.getDirection();
+        int doubleForwardRow = forwardRow + player.getDirection();
+
+        if (forwardRow < 0 || forwardRow > 7) {
+            return false;
+        }
+
+        int forwardIndex = forwardRow * 8 + col;
+        int doubleForwardIndex = doubleForwardRow * 8 + col;
+
+        long opponentPushers = player == Player.RED ? blackPushers : redPushers;
+        long opponentPawns = player == Player.RED ? blackPawns : redPawns;
+
+        // check pour pusher en diagonale gauche
+        if (col > 0) {
+            long leftDiagBit = 1L << (forwardIndex - 1);
+            if ((opponentPushers & leftDiagBit) != 0) {
+                return true;
+            }
+        }
+
+        // check pour pusher en diagonale droite
+        if (col < 7) {
+            long rightDiagBit = 1L << (forwardIndex + 1);
+            if ((opponentPushers & rightDiagBit) != 0) {
+                return true;
+            }
+        }
+
+        // check pour pion activé en diagonale gauche
+        if (col > 1 && doubleForwardRow >= 0 && doubleForwardRow < 8) {
+            long leftPawnBit = 1L << (forwardIndex - 1);
+            long leftPusherBit = 1L << (doubleForwardIndex - 2);
+            if ((opponentPawns & leftPawnBit) != 0 && (opponentPushers & leftPusherBit) != 0) {
+                return true;
+            }
+        }
+
+        // check pour pion activé en diagonale droite
+        if (col < 6 && doubleForwardRow >= 0 && doubleForwardRow < 8) {
+            long rightPawnBit = 1L << (forwardIndex + 1);
+            long rightPusherBit = 1L << (doubleForwardIndex + 2);
+            if ((opponentPawns & rightPawnBit) != 0 && (opponentPushers & rightPusherBit) != 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public long allReds() {
+        return redPushers | redPawns;
+    }
+
+    public long allBlacks() {
+        return blackPushers | blackPawns;
+    }
+
+    public long occupied() {
+        return allReds() | allBlacks();
+    }
+
+    public long getRedPushers() {
+        return redPushers;
+    }
+
+    public long getRedPawns() {
+        return redPawns;
+    }
+
+    public long getBlackPushers() {
+        return blackPushers;
+    }
+
+    public long getBlackPawns() {
+        return blackPawns;
+    }
+
+    public Move getLastMove() {
+        return lastMove;
+    }
+
+    public long getHash() {
+        return zobristHash;
+    }
+
+    private void set(int row, int col, int piece) {
+        int index = row * 8 + col;
+        long bit = 1L << index;
+
+        // remove old piece if any
+        redPushers &= ~bit;
+        redPawns &= ~bit;
+        blackPushers &= ~bit;
+        blackPawns &= ~bit;
+
+        // add new piece
+        switch (piece) {
+            case RED_PUSHER:
+                redPushers |= bit;
+                break;
+            case RED_PAWN:
+                redPawns |= bit;
+                break;
+            case BLACK_PUSHER:
+                blackPushers |= bit;
+                break;
+            case BLACK_PAWN:
+                blackPawns |= bit;
+                break;
+            case EMPTY:
+                break;
+        }
+    }
+
+    private boolean canEat(Player player, int row, int col) {
+        int rowToCheck = row + player.getDirection();
+
+        if (rowToCheck < 0 || rowToCheck > 7) {
+            return false;
+        }
+
+        long opponentPieces = player.getOpponent() == Player.RED ?
+                redPushers :
+                blackPushers;
+
+        int leftCol = col - 1;
+        int rightCol = col + 1;
+
+        // diagonal gauche
+        if (leftCol >= 0 && ((opponentPieces & (1L << (rowToCheck * 8 + leftCol))) != 0)) {
+            return true;
+        }
+
+        // diagonal droite
+        if (rightCol < 8 && ((opponentPieces & (1L << (rowToCheck * 8 + rightCol))) != 0)) {
+            return true;
+        }
+
+        return false;
     }
 
     private int getBackedPushers(Player player) {
@@ -323,82 +505,20 @@ public class Board {
         return count;
     }
 
-    public ArrayList<Move> getSortedPossibleMoves(Player player) {
-        ArrayList<Move> possibleMoves = getPossibleMoves(player);
-        possibleMoves.sort(player == Player.RED ? MOVE_COMPARATOR_RED : MOVE_COMPARATOR_BLACK);
-        return possibleMoves;
-    }
+    private ArrayList<Move> generateMovesFromBitboard(long toBits, int shift) {
+        ArrayList<Move> moves = new ArrayList<>();
 
-    public ArrayList<Move> getPossibleMoves(Player player) {
-        ArrayList<Move> possibleMoves = new ArrayList<>(32);
-
-        long occ = occupied();
-        long blackPieces = allBlacks();
-        long redPieces = allReds();
-
-        if (player == Player.RED) {
-            // Pushers
-            // up << 8
-            long pusherForward = (redPushers << 8) & ~occ;
-            possibleMoves.addAll(generateMovesFromBitboard(pusherForward, 8));
-
-            // diaognal gauche << 7
-            long pusherDiagLeft = ((redPushers & ~MASK_COL_A) << 7) & ~redPieces;
-            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagLeft, 7));
-
-            // diaognal droite << 9
-            long pusherDiagRight = ((redPushers & ~MASK_COL_H) << 9) & ~redPieces;
-            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagRight, 9));
-
-            // Pions
-            // up << 8
-            long forwardPawns = redPawns & (redPushers << 8);
-            long forwardTo = (forwardPawns << 8) & ~occ;
-            possibleMoves.addAll(generateMovesFromBitboard(forwardTo, 8));
-
-            // diaognal gauche << 7
-            long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
-            long diagLeftTo = (diagLeftPawns << 7) & ~redPieces & ~MASK_COL_H;
-            possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, 7));
-
-            // diaognal droite << 9
-            long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
-            long diagRightTo = (diagRightPawns << 9) & ~redPieces & ~MASK_COL_A;
-            possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, 9));
-        } else {
-            // down >> 8
-            long pusherForward = (blackPushers >> 8) & ~occ & ~(0xFFL << 56);
-            possibleMoves.addAll(generateMovesFromBitboard(pusherForward, -8));
-
-            // diagonal droite >> 7
-            long pusherDiagRight = ((blackPushers & ~MASK_COL_H) >> 7) & ~blackPieces;
-            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagRight, -7));
-
-            // diagonal gauche >> 9
-            long pusherDiagLeft = ((blackPushers & ~MASK_COL_A) >> 9) & ~blackPieces & 0x007F7F7F7F7F7F7FL;
-            possibleMoves.addAll(generateMovesFromBitboard(pusherDiagLeft, -9));
-
-            // Pions
-            // up >> 8
-            long forwardPawns = blackPawns & (blackPushers >> 8); // pushers directly behind
-            long forwardTo = (forwardPawns >> 8) & ~occ; // destination must be empty
-            possibleMoves.addAll(generateMovesFromBitboard(forwardTo, -8));
-
-            // diaognal gauche >> 7
-            long diagLeftPawns = (blackPawns & ~MASK_COL_A) & ((blackPushers & ~MASK_COL_H) >> 7);
-            long diagLeftTo = (diagLeftPawns >> 7) & ~blackPieces & ~MASK_COL_A;
-            possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, -7));
-
-            // diaognal droite >> 9
-            long diagRightPawns = (blackPawns & ~MASK_COL_H) & ((blackPushers & ~MASK_COL_A) >> 9);
-            long diagRightTo = (diagRightPawns >> 9) & ~blackPieces & ~MASK_COL_H;
-            possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, -9));
+        while (toBits != 0) {
+            int toIndex = Long.numberOfTrailingZeros(toBits);
+            int fromIndex = toIndex - shift;
+            moves.add(ALL_MOVES.get(Move.toString(fromIndex, toIndex)));
+            toBits &= toBits - 1;
         }
 
-        return possibleMoves;
+        return moves;
     }
 
-    public int getPossibleMovesSize(Player player) {
+    private int getPossibleMovesSize(Player player) {
         int size = 0;
 
         long occ = occupied();
@@ -411,11 +531,11 @@ public class Board {
             long pusherForward = (redPushers << 8) & ~occ;
             size += generateMovesFromBitboardSize(pusherForward, 8);
 
-            // diaognal gauche << 7
+            // diagonal gauche << 7
             long pusherDiagLeft = ((redPushers & ~MASK_COL_A) << 7) & ~redPieces;
             size += generateMovesFromBitboardSize(pusherDiagLeft, 7);
 
-            // diaognal droite << 9
+            // diagonal droite << 9
             long pusherDiagRight = ((redPushers & ~MASK_COL_H) << 9) & ~redPieces;
             size += generateMovesFromBitboardSize(pusherDiagRight, 9);
 
@@ -425,16 +545,17 @@ public class Board {
             long forwardTo = (forwardPawns << 8) & ~occ;
             size += generateMovesFromBitboardSize(forwardTo, 8);
 
-            // diaognal gauche << 7
+            // diagonal gauche << 7
             long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
             long diagLeftTo = (diagLeftPawns << 7) & ~redPieces & ~MASK_COL_H;
             size += generateMovesFromBitboardSize(diagLeftTo, 7);
 
-            // diaognal droite << 9
+            // diagonal droite << 9
             long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
             long diagRightTo = (diagRightPawns << 9) & ~redPieces & ~MASK_COL_A;
             size += generateMovesFromBitboardSize(diagRightTo, 9);
         } else {
+            // Pushers
             // down >> 8
             long pusherForward = (blackPushers >> 8) & ~occ & ~(0xFFL << 56);
             size += generateMovesFromBitboardSize(pusherForward, -8);
@@ -453,12 +574,12 @@ public class Board {
             long forwardTo = (forwardPawns >> 8) & ~occ; // destination must be empty
             size += generateMovesFromBitboardSize(forwardTo, -8);
 
-            // diaognal gauche >> 7
+            // diagonal gauche >> 7
             long diagLeftPawns = (blackPawns & ~MASK_COL_A) & ((blackPushers & ~MASK_COL_H) >> 7);
             long diagLeftTo = (diagLeftPawns >> 7) & ~blackPieces & ~MASK_COL_A;
             size += generateMovesFromBitboardSize(diagLeftTo, -7);
 
-            // diaognal droite >> 9
+            // diagonal droite >> 9
             long diagRightPawns = (blackPawns & ~MASK_COL_H) & ((blackPushers & ~MASK_COL_A) >> 9);
             long diagRightTo = (diagRightPawns >> 9) & ~blackPieces & ~MASK_COL_H;
             size += generateMovesFromBitboardSize(diagRightTo, -9);
@@ -467,143 +588,15 @@ public class Board {
         return size;
     }
 
-    private ArrayList<Move> generateMovesFromBitboard(long toBits, int shift) {
-        ArrayList<Move> moves = new ArrayList<>();
-
-        while (toBits != 0) {
-            int toIndex = Long.numberOfTrailingZeros(toBits);
-            int fromIndex = toIndex - shift;
-            moves.add(ALL_MOVES.get(Move.toString(fromIndex, toIndex)));
-            toBits &= toBits - 1;
-        }
-
-        return moves;
-    }
-
     private int generateMovesFromBitboardSize(long toBits, int shift) {
         int size = 0;
 
         while (toBits != 0) {
             int toIndex = Long.numberOfTrailingZeros(toBits);
-            int fromIndex = toIndex - shift;
             size++;
             toBits &= toBits - 1;
         }
 
         return size;
-    }
-
-    public boolean hasPlayerWon(Player player) {
-        if (player == Player.RED) {
-            return (allReds() & 0xFF00000000000000L) != 0 || blackPushers == 0L;
-        } else {
-            return (allBlacks() & 0x00000000000000FFL) != 0 || redPushers == 0L;
-        }
-    }
-
-    public boolean canEat(Player player, int row, int col) {
-        int rowToCheck = row + player.getDirection();
-
-        if (rowToCheck < 0 || rowToCheck > 7) {
-            return false;
-        }
-
-        long opponentPieces = player.getOpponent() == Player.RED ?
-                redPushers :
-                blackPushers;
-
-        int leftCol = col - 1;
-        int rightCol = col + 1;
-
-        // Check left diagonal
-        if (leftCol >= 0 && ((opponentPieces & (1L << (rowToCheck * 8 + leftCol))) != 0)) {
-            return true;
-        }
-
-        // Check right diagonal
-        if (rightCol < 8 && ((opponentPieces & (1L << (rowToCheck * 8 + rightCol))) != 0)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    public void set(int row, int col, int piece) {
-        int index = row * 8 + col;
-        long bit = 1L << index;
-
-        // Clear the position from all bitboards first
-        redPushers &= ~bit;
-        redPawns &= ~bit;
-        blackPushers &= ~bit;
-        blackPawns &= ~bit;
-
-        // Set the piece in the appropriate bitboard
-        switch (piece) {
-            case RED_PUSHER:
-                redPushers |= bit;
-                break;
-            case RED_PAWN:
-                redPawns |= bit;
-                break;
-            case BLACK_PUSHER:
-                blackPushers |= bit;
-                break;
-            case BLACK_PAWN:
-                blackPawns |= bit;
-                break;
-            case EMPTY:
-                // Already cleared above, do nothing
-                break;
-        }
-    }
-
-    public int get(int index) {
-        long bit = 1L << index;
-        if ((redPushers & bit) != 0) return RED_PUSHER;
-        if ((redPawns & bit) != 0) return RED_PAWN;
-        if ((blackPushers & bit) != 0) return BLACK_PUSHER;
-        if ((blackPawns & bit) != 0) return BLACK_PAWN;
-        return EMPTY;
-    }
-
-    public List<Move> getNoisyMoves(Player player) {
-        return getPossibleMoves(player).stream().filter(move -> canEat(player, move.getFrom() / 8, move.getFrom() % 8)).toList();
-    }
-
-    public long allReds() {
-        return redPushers | redPawns;
-    }
-
-    public long allBlacks() {
-        return blackPushers | blackPawns;
-    }
-
-    public long occupied() {
-        return allReds() | allBlacks();
-    }
-
-    public long getRedPushers() {
-        return redPushers;
-    }
-
-    public long getRedPawns() {
-        return redPawns;
-    }
-
-    public long getBlackPushers() {
-        return blackPushers;
-    }
-
-    public long getBlackPawns() {
-        return blackPawns;
-    }
-
-    public Move getLastMove() {
-        return lastMove;
-    }
-
-    public long getHash() {
-        return zobristHash;
     }
 }

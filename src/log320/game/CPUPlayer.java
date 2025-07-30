@@ -227,7 +227,7 @@ public class CPUPlayer {
             return bestValue;
         }
 
-        for (Move move : board.getNoisyMoves(player)) {
+        for (Move move : board.getCaptureMoves(player)) {
             board.play(move);
             int value = -quiescenceSearch(board, -beta, -alpha, player.getOpponent(), currentDepth, startTime);
             board.undo();

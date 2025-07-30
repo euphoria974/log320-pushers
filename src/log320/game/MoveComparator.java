@@ -26,10 +26,10 @@ public class MoveComparator implements Comparator<Move> {
         }
 
         int toIndex = move.getTo();
-        int toRow = toIndex >> 3; // div 8
-        int toCol = toIndex & 7;  // mod 8
+        int toRow = toIndex / 8;
+        int toCol = toIndex % 8;
 
-        int destPiece = BOARD.get(toIndex);
+        int destPiece = BOARD.getPieceFromIndex(toIndex);
         int score = 0;
 
         // Capture
