@@ -238,7 +238,7 @@ public class Board {
     private final int pusherScore = 173;
     private final int pawnScore = 37;
     private final int backedPusherScore = 23;
-    private final int halfBoardScore = 41;
+    private final int halfBoardScore = 59;
 
     public int evaluate(Player player) {
         long myPushers = player == Player.RED ? getRedPushers() : getBlackPushers();
