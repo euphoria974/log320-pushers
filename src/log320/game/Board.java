@@ -160,13 +160,6 @@ public class Board {
         return clone;
     }
 
-    // permet de cloner et joeur un move
-    public Board clone(Move move) {
-        Board clone = clone();
-        clone.play(move);
-        return clone;
-    }
-
     public void play(Move move) {
         lastMove = move;
 

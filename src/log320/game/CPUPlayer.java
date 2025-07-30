@@ -57,10 +57,12 @@ public class CPUPlayer {
 
             for (int moveIndex = 0; moveIndex < possibleMoves.size(); moveIndex++) {
                 Move move = possibleMoves.get(moveIndex);
-                Board boardCopy = BOARD.clone(move);
+                Board boardCopy = BOARD.clone();
+                boardCopy.play(move);
 
                 final int idx = moveIndex;
                 int finalMaxDepth = maxDepth;
+
                 futures.add(executor.submit(() -> {
                     int score = -negamax(
                             boardCopy,
@@ -71,6 +73,7 @@ public class CPUPlayer {
                             finalMaxDepth,
                             startTime
                     );
+
                     return new int[]{score, idx};
                 }));
             }
@@ -85,7 +88,7 @@ public class CPUPlayer {
                     Move move = possibleMoves.get(moveIndex);
 
                     if (score == Integer.MIN_VALUE) {
-                        // temps maximum écoulé
+                        // temps maximum écoulé, résultat biaisé
                         break timeLoop;
                     }
 
@@ -118,6 +121,7 @@ public class CPUPlayer {
 
         System.out.println("\033[32;40mBest moves found: " + BEST_MOVES + " with score: " + finalBestScore + " at depth: " + maxDepth);
 
+        // retourne un coup aléatoire parmi les meilleurs coups trouvés
         return BEST_MOVES.get(RANDOM.nextInt(BEST_MOVES.size()));
     }
 
@@ -126,7 +130,6 @@ public class CPUPlayer {
             return Integer.MIN_VALUE;
         }
 
-        // int boardScore = board.evaluate(player);
         // pour favoriser les coups gagnants, on soustrait le depth
         if (board.hasPlayerWon(player)) {
             return WIN_SCORE - currentDepth;
@@ -230,7 +233,6 @@ public class CPUPlayer {
             board.undo();
 
             bestValue = Math.max(bestValue, value);
-
             alpha = Math.max(alpha, bestValue);
 
             if (alpha >= beta) {

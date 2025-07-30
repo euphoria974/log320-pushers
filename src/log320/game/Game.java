@@ -14,7 +14,7 @@ import java.util.UUID;
 import static log320.Const.ALL_MOVES;
 
 public class Game {
-    private final List<Move> PLAYED_MOVES = new ArrayList<>();
+    private final List<Move> PLAYED_MOVES = new ArrayList<>(70);
 
     private Board board;
     private CPUPlayer cpuPlayer;
@@ -25,13 +25,6 @@ public class Game {
 
     public void start(String boardState, Player currentPlayer) {
         this.board = new Board(boardState);
-        this.cpuPlayer = new CPUPlayer(board, currentPlayer);
-        this.currentPlayer = currentPlayer;
-    }
-
-    public void start(Player currentPlayer) {
-        this.board = new Board();
-        this.board.init();
         this.cpuPlayer = new CPUPlayer(board, currentPlayer);
         this.currentPlayer = currentPlayer;
     }
@@ -68,7 +61,7 @@ public class Game {
         board.play(move);
 
         Move lastMove = !PLAYED_MOVES.isEmpty() ? PLAYED_MOVES.getLast() : null;
-        if (lastMove == null || !lastMove.toString().equals(move.toString())) {
+        if (lastMove == null || !lastMove.equals(move)) {
             PLAYED_MOVES.add(move);
         }
     }

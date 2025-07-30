@@ -15,7 +15,6 @@ import static log320.Const.RED_PUSHER;
 
 class Client {
     public static void main(String[] args) {
-        // Init new instances
         final Game game = new Game();
         ALL_MOVES.get("A1A2");
         ZobristHash.getHashForPosition(0, 0, RED_PUSHER);
@@ -28,8 +27,7 @@ class Client {
         Scanner in = new Scanner(System.in);
         String ipInput = in.nextLine();
 
-        if (!ipInput.isEmpty())
-        {
+        if (!ipInput.isEmpty()) {
             serverAddress = ipInput;
         }
 

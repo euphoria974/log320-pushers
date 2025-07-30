@@ -26,8 +26,8 @@ public class MoveComparator implements Comparator<Move> {
         }
 
         int toIndex = move.getTo();
-        int toRow = toIndex / 8;
-        int toCol = toIndex % 8;
+        int toRow = toIndex >> 3; // div 8
+        int toCol = toIndex & 7;  // mod 8
 
         int destPiece = BOARD.get(toIndex);
         int score = 0;
@@ -39,7 +39,7 @@ public class MoveComparator implements Comparator<Move> {
             score += 300;
         }
 
-        // exposé
+        // Exposé
         if (BOARD.isExposed(PLAYER, toRow, toCol)) {
             score -= 10000;
         }

@@ -1,6 +1,5 @@
 package log320.transposition;
 
-import log320.entities.Player;
 import log320.game.Board;
 
 import java.util.Random;
@@ -11,7 +10,7 @@ public class ZobristHash {
     private static final long[][][] PIECES_TABLE = new long[8][8][5];
 
     static {
-        Random random = new Random(0); // fixed seed for "pseudorandom"
+        Random random = new Random(0);
 
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
@@ -36,20 +35,18 @@ public class ZobristHash {
     private static long addPiecesHash(long hash, long piecesBoard, int piece) {
         while (piecesBoard != 0) {
             int index = Long.numberOfTrailingZeros(piecesBoard);
-            int row = index >> 3; // same as index / 8
-            int col = index & 7;  // same as index % 8
+            int row = index >> 3; // div 8
+            int col = index & 7;  // mod 8
+
             hash ^= PIECES_TABLE[row][col][piece];
             piecesBoard &= piecesBoard - 1;
         }
+
         return hash;
     }
 
     public static long getHashForPosition(int row, int col, int piece) {
         return PIECES_TABLE[row][col][piece];
-    }
-
-    public static long getHashForPlayer(Player player) {
-        return player == Player.RED ? 0x1234567890ABCDEFL : 0xFEDCBA0987654321L;
     }
 
     public static long updateHash(long currentHash, int fromRow, int fromCol, int fromPiece, int toRow, int toCol, int toPiece) {
