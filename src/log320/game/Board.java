@@ -20,7 +20,6 @@ public class Board {
     private final MoveComparator MOVE_COMPARATOR_BLACK = new MoveComparator(this, Player.BLACK);
     private final List<UndoMoveState> MOVE_STATE_POOL = new ArrayList<>(1000);
     private final Stack<UndoMoveState> MOVE_STACK = new Stack<>();
-    private final BoardEvaluator EVALUATOR = new BoardEvaluator(this);
 
     private long redPushers = 0L;
     private long redPawns = 0L;
@@ -98,7 +97,6 @@ public class Board {
 
         System.out.println("==========================");
     }
-
 
     public boolean isExposed(Player player, int row, int col) {
         int forwardRow = row + player.getDirection();
@@ -244,8 +242,89 @@ public class Board {
         moveStatePoolIndex--;
     }
 
+    private final int pusherScore = 141;
+    private final int pawnScore = 37;
+    private final int backedPusherScore = 23;
+    private final int halfBoardScore = 41;
+
     public int evaluate(Player player) {
-        return EVALUATOR.evaluate(player);
+        long myPushers = player == Player.RED ? getRedPushers() : getBlackPushers();
+        long opponentPushers = player.getOpponent() == Player.RED ? getRedPushers() : getBlackPushers();
+        long myPawns = player == Player.RED ? getRedPawns() : getBlackPawns();
+        long opponentPawns = player.getOpponent() == Player.RED ? getRedPawns() : getBlackPawns();
+
+        int pushersDiff = Long.bitCount(myPushers) - Long.bitCount(opponentPushers);
+        int pawnsDiff = Long.bitCount(myPawns) - Long.bitCount(opponentPawns);
+
+        int backedPushers = getBackedPushers(player) - getBackedPushers(player.getOpponent());
+        int halfBoard = getHalfBoardScore(player) - getHalfBoardScore(player.getOpponent());
+
+        return pusherScore * pushersDiff +
+                pawnScore * pawnsDiff +
+                backedPusherScore * backedPushers +
+                halfBoardScore * halfBoard;
+    }
+
+    private int getBackedPushers(Player player) {
+        long pushers = player == Player.RED ? redPushers : blackPushers;
+        long myPieces = player == Player.RED ? allReds() : allBlacks();
+
+        int backedPushers = 0;
+
+        for (int i = 0; i < 64; i++) {
+            if ((pushers & (1L << i)) != 0) {
+                int row = i / 8;
+                int col = i % 8;
+
+                // Check diagonally behind left
+                if (row > 0 && col > 0) {
+                    int diagLeftIdx = (row - 1) * 8 + (col - 1);
+                    if ((myPieces & (1L << diagLeftIdx)) != 0) {
+                        backedPushers++;
+                        continue;
+                    }
+                }
+
+                // Check diagonally behind right
+                if (row > 0 && col < 7) {
+                    int diagRightIdx = (row - 1) * 8 + (col + 1);
+                    if ((myPieces & (1L << diagRightIdx)) != 0) {
+                        backedPushers++;
+                    }
+                }
+            }
+        }
+
+        return backedPushers;
+    }
+
+    private int getHalfBoardScore(Player player) {
+        long pushers = player == Player.RED ? redPushers : blackPushers;
+        int count = 0;
+
+        if (player == Player.RED) {
+            // Rows 4-7
+            for (int row = 4; row < 8; row++) {
+                for (int col = 0; col < 8; col++) {
+                    int idx = row * 8 + col;
+                    if ((pushers & (1L << idx)) != 0) {
+                        count++;
+                    }
+                }
+            }
+        } else {
+            // Rows 0-3
+            for (int row = 0; row < 4; row++) {
+                for (int col = 0; col < 8; col++) {
+                    int idx = row * 8 + col;
+                    if ((pushers & (1L << idx)) != 0) {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        return count;
     }
 
     public ArrayList<Move> getSortedPossibleMoves(Player player) {
@@ -283,12 +362,12 @@ public class Board {
 
             // diaognal gauche << 7
             long diagLeftPawns = (redPawns & ~MASK_COL_H) & ((redPushers & ~MASK_COL_A) << 7);
-            long diagLeftTo = (diagLeftPawns << 7) & ~occ & ~MASK_COL_H;
+            long diagLeftTo = (diagLeftPawns << 7) & ~redPieces & ~MASK_COL_H;
             possibleMoves.addAll(generateMovesFromBitboard(diagLeftTo, 7));
 
             // diaognal droite << 9
             long diagRightPawns = (redPawns & ~MASK_COL_A) & ((redPushers & ~MASK_COL_H) << 9);
-            long diagRightTo = (diagRightPawns << 9) & ~occ & ~MASK_COL_A;
+            long diagRightTo = (diagRightPawns << 9) & ~redPieces & ~MASK_COL_A;
             possibleMoves.addAll(generateMovesFromBitboard(diagRightTo, 9));
         } else {
             // down >> 8

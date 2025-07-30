@@ -1,5 +1,6 @@
 package log320.transposition;
 
+import log320.entities.Player;
 import log320.game.Board;
 
 import java.util.Random;
@@ -28,7 +29,7 @@ public class ZobristHash {
         hash = addPiecesHash(hash, board.getRedPawns(), RED_PAWN);
         hash = addPiecesHash(hash, board.getBlackPushers(), BLACK_PUSHER);
         hash = addPiecesHash(hash, board.getBlackPawns(), BLACK_PAWN);
-        
+
         return hash;
     }
 
@@ -45,6 +46,10 @@ public class ZobristHash {
 
     public static long getHashForPosition(int row, int col, int piece) {
         return PIECES_TABLE[row][col][piece];
+    }
+
+    public static long getHashForPlayer(Player player) {
+        return player == Player.RED ? 0x1234567890ABCDEFL : 0xFEDCBA0987654321L;
     }
 
     public static long updateHash(long currentHash, int fromRow, int fromCol, int fromPiece, int toRow, int toCol, int toPiece) {

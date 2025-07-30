@@ -26,7 +26,6 @@ public class MoveComparator implements Comparator<Move> {
         }
 
         int toIndex = move.getTo();
-        int fromIndex = move.getFrom();
         int toRow = toIndex / 8;
         int toCol = toIndex % 8;
 

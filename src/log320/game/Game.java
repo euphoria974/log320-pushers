@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static log320.Const.ALL_MOVES;
-import static log320.Const.WIN_SCORE;
 
 public class Game {
     private final List<Move> PLAYED_MOVES = new ArrayList<>();
@@ -38,7 +37,7 @@ public class Game {
     }
 
     public void over() {
-        if (board.evaluate(currentPlayer) == WIN_SCORE) {
+        if (board.hasPlayerWon(currentPlayer)) {
             return;
         }
 

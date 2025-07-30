@@ -2,12 +2,17 @@ package log320.transposition;
 
 import log320.entities.Move;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 // https://adamberent.com/transposition-table-and-zobrist-hashing/
 public class TranspositionTable {
-    private final Map<Long, Entry> table = new ConcurrentHashMap<>();
+    private final Entry[] ENTRIES = new Entry[8194311];
+
+    private int age = 0;
+
+    public TranspositionTable() {
+        for (int i = 0; i < ENTRIES.length; i++) {
+            ENTRIES[i] = new Entry();
+        }
+    }
 
     public static class Entry {
         public long hash;
@@ -15,23 +20,37 @@ public class TranspositionTable {
         public int score;
         public NodeType type;
         public Move bestMove;
+        public int age;
 
-        public Entry(long hash, int depth, int score, NodeType type, Move bestMove) {
+        public void set(long hash, int depth, int score, NodeType type, Move bestMove, int age) {
             this.hash = hash;
             this.depth = depth;
             this.score = score;
             this.type = type;
             this.bestMove = bestMove;
+            this.age = age;
         }
     }
 
     public Entry get(long hash) {
-        Entry entry = table.get(hash);
-        if (entry == null) return null;
-        return entry.hash == hash ? entry : null;
+        Entry entry = ENTRIES[indexOf(hash)];
+        if (entry == null || entry.type == null) return null;
+        return entry.hash == hash && entry.age == age ? entry : null;
     }
 
     public void put(long hash, int depth, int score, NodeType type, Move bestMove) {
-        table.put(hash, new Entry(hash, depth, score, type, bestMove));
+        Entry entry = ENTRIES[indexOf(hash)];
+
+        if (entry.depth < depth) {
+            entry.set(hash, depth, score, type, bestMove, age);
+        }
+    }
+
+    public void incrementAge() {
+        age++;
+    }
+
+    private int indexOf(long hash) {
+        return Math.floorMod(hash, ENTRIES.length);
     }
 }
