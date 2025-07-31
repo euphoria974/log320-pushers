@@ -5,6 +5,8 @@ import log320.entities.Player;
 
 import java.util.Comparator;
 
+import static log320.Const.*;
+
 public class MoveComparator implements Comparator<Move> {
     private final Board BOARD;
     private final Player PLAYER;
@@ -34,19 +36,19 @@ public class MoveComparator implements Comparator<Move> {
 
         // Capture
         if (destPiece == PLAYER.getOpponent().getPusher()) {
-            score += 1000;
+            score += PUSHER_WEIGHT;
         } else if (destPiece == PLAYER.getOpponent().getPawn()) {
-            score += 300;
+            score += PAWN_WEIGHT;
         }
 
         // Exposé
         if (BOARD.isExposed(PLAYER, toRow, toCol)) {
-            score -= 10000;
+            score -= EXPOSED_PUSHER_WEIGHT;
         }
 
         // Près de la victoire
         int distanceToWinningRow = Math.abs(toRow - PLAYER.getWinningRow());
-        score += 10 * (7 - distanceToWinningRow);
+        score += DISTANCE_TO_WIN_WEIGHT * (7 - distanceToWinningRow);
 
         return score;
     }

@@ -292,12 +292,16 @@ public class Board {
         int backedPushers = getBackedPushers(player) - getBackedPushers(player.getOpponent());
         int halfBoard = getHalfBoardScore(player) - getHalfBoardScore(player.getOpponent());
         int mobility = getPossibleMovesSize(player) - getPossibleMovesSize(player.getOpponent());
+        int clearPath = countPushersWithStraightPath(player) - countPushersWithStraightPath(player.getOpponent());
+        int exposedPushers = countExposedPushers(player) - countExposedPushers(player.getOpponent());
 
         return PUSHER_WEIGHT * pushersDiff +
                 PAWN_WEIGHT * pawnsDiff +
                 BACKED_PUSHER_WEIGHT * backedPushers +
-                HALF_BOARD_WEIGHT * halfBoard +
-                MOBILITY_WEIGHT * mobility;
+                DISTANCE_TO_WIN_WEIGHT * halfBoard +
+                MOBILITY_WEIGHT * mobility +
+                CLEAR_PATH_WEIGHT * clearPath +
+                EXPOSED_PUSHER_WEIGHT * exposedPushers;
     }
 
     public boolean isExposed(Player player, int row, int col) {
@@ -454,7 +458,7 @@ public class Board {
                 int row = i / 8;
                 int col = i % 8;
 
-                // Check diagonally behind left
+                // diagonal gauche
                 if (row > 0 && col > 0) {
                     int diagLeftIdx = (row - 1) * 8 + (col - 1);
                     if ((myPieces & (1L << diagLeftIdx)) != 0) {
@@ -463,7 +467,7 @@ public class Board {
                     }
                 }
 
-                // Check diagonally behind right
+                // diagonal droite
                 if (row > 0 && col < 7) {
                     int diagRightIdx = (row - 1) * 8 + (col + 1);
                     if ((myPieces & (1L << diagRightIdx)) != 0) {
@@ -477,6 +481,20 @@ public class Board {
     }
 
     private int getHalfBoardScore(Player player) {
+        long pushers = player == Player.RED ? redPushers : blackPushers;
+        int distances = 0;
+
+        for (int i = 0; i < 64; i++) {
+            if ((pushers & (1L << i)) != 0) {
+                int row = i / 8;
+                distances += Math.abs(player.getWinningRow() - row);
+            }
+        }
+
+        return distances;
+
+
+        /*
         long pushers = player == Player.RED ? redPushers : blackPushers;
         int count = 0;
 
@@ -502,7 +520,7 @@ public class Board {
             }
         }
 
-        return count;
+        return count;*/
     }
 
     private ArrayList<Move> generateMovesFromBitboard(long toBits, int shift) {
@@ -598,5 +616,62 @@ public class Board {
         }
 
         return size;
+    }
+
+    private int countPushersWithStraightPath(Player player) {
+        long pushers = player == Player.RED ? redPushers : blackPushers;
+        long opponentPushers = player == Player.RED ? blackPushers : redPushers;
+
+        int count = 0;
+
+        for (int i = 0; i < 64; i++) {
+            if ((pushers & (1L << i)) != 0) {
+                int row = i / 8;
+                int col = i % 8;
+                int nextRow = row + player.getDirection();
+
+                if (nextRow < 0 || nextRow > 7) continue;
+
+                boolean clear = true;
+
+                // Forward
+                int forwardIdx = nextRow * 8 + col;
+                if ((opponentPushers & (1L << forwardIdx)) != 0) clear = false;
+
+                // Diagonal left
+                if (col > 0) {
+                    int diagLeftIdx = nextRow * 8 + (col - 1);
+                    if ((opponentPushers & (1L << diagLeftIdx)) != 0) clear = false;
+                }
+
+                // Diagonal right
+                if (col < 7) {
+                    int diagRightIdx = nextRow * 8 + (col + 1);
+                    if ((opponentPushers & (1L << diagRightIdx)) != 0) clear = false;
+                }
+
+                if (clear) count++;
+            }
+        }
+
+        return count;
+    }
+
+    private int countExposedPushers(Player player) {
+        long pushers = player == Player.RED ? redPushers : blackPushers;
+        int count = 0;
+
+        for (int i = 0; i < 64; i++) {
+            if ((pushers & (1L << i)) != 0) {
+                int row = i / 8;
+                int col = i % 8;
+
+                if (isExposed(player, row, col)) {
+                    count++;
+                }
+            }
+        }
+
+        return count;
     }
 }

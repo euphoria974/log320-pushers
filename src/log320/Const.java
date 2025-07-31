@@ -16,11 +16,13 @@ public final class Const {
     public static final Map<String, Move> ALL_MOVES = new HashMap<>(308);
     public static final Random RANDOM = new Random();
 
-    public static final int PUSHER_WEIGHT = 201;
-    public static final int PAWN_WEIGHT = 37;
-    public static final int BACKED_PUSHER_WEIGHT = 51;
-    public static final int HALF_BOARD_WEIGHT = 100;
-    public static final int MOBILITY_WEIGHT = 31;
+    public static final int PUSHER_WEIGHT = 410;
+    public static final int PAWN_WEIGHT = 203;
+    public static final int BACKED_PUSHER_WEIGHT = 115;
+    public static final int DISTANCE_TO_WIN_WEIGHT = 67;
+    public static final int MOBILITY_WEIGHT = 41;
+    public static final int CLEAR_PATH_WEIGHT = 153;
+    public static final int EXPOSED_PUSHER_WEIGHT = -500;
 
     // Constantes du jeu
     public static final int EMPTY = 0;
