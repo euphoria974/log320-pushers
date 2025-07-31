@@ -454,7 +454,7 @@ public class Board {
                 int row = i / 8;
                 int col = i % 8;
 
-                // Check diagonally behind left
+                // ddiagonal gauche
                 if (row > 0 && col > 0) {
                     int diagLeftIdx = (row - 1) * 8 + (col - 1);
                     if ((myPieces & (1L << diagLeftIdx)) != 0) {
@@ -463,7 +463,7 @@ public class Board {
                     }
                 }
 
-                // Check diagonally behind right
+                // diagonal droite
                 if (row > 0 && col < 7) {
                     int diagRightIdx = (row - 1) * 8 + (col + 1);
                     if ((myPieces & (1L << diagRightIdx)) != 0) {
@@ -481,20 +481,22 @@ public class Board {
         int count = 0;
 
         if (player == Player.RED) {
-            // Rows 4-7
+            // rows 4-7
             for (int row = 4; row < 8; row++) {
                 for (int col = 0; col < 8; col++) {
                     int idx = row * 8 + col;
+
                     if ((pushers & (1L << idx)) != 0) {
                         count++;
                     }
                 }
             }
         } else {
-            // Rows 0-3
+            // rows 0-3
             for (int row = 0; row < 4; row++) {
                 for (int col = 0; col < 8; col++) {
                     int idx = row * 8 + col;
+
                     if ((pushers & (1L << idx)) != 0) {
                         count++;
                     }
