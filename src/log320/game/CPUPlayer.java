@@ -140,7 +140,7 @@ public class CPUPlayer {
         }
 
         if (currentDepth >= maxDepth) {
-            return -quiescenceSearch(board, alpha, beta, player.getOpponent(), currentDepth, startTime);
+            return quiescenceSearch(board, alpha, beta, player, currentDepth, startTime);
         }
 
         int remainingDepth = maxDepth - currentDepth;

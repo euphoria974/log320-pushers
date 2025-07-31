@@ -292,12 +292,14 @@ public class Board {
         int backedPushers = getBackedPushers(player) - getBackedPushers(player.getOpponent());
         int halfBoard = getHalfBoardScore(player) - getHalfBoardScore(player.getOpponent());
         int mobility = getPossibleMovesSize(player) - getPossibleMovesSize(player.getOpponent());
+        int exposedPushers = getExposedPushers(player) - getExposedPushers(player.getOpponent());
 
         return PUSHER_WEIGHT * pushersDiff +
                 PAWN_WEIGHT * pawnsDiff +
                 BACKED_PUSHER_WEIGHT * backedPushers +
                 HALF_BOARD_WEIGHT * halfBoard +
-                MOBILITY_WEIGHT * mobility;
+                MOBILITY_WEIGHT * mobility +
+                EXPOSED_PUSHER_WEIGHT * exposedPushers;
     }
 
     public boolean isExposed(Player player, int row, int col) {
@@ -594,11 +596,26 @@ public class Board {
         int size = 0;
 
         while (toBits != 0) {
-            int toIndex = Long.numberOfTrailingZeros(toBits);
             size++;
             toBits &= toBits - 1;
         }
 
         return size;
+    }
+
+    private int getExposedPushers(Player player) {
+        long pushers = player == Player.RED ? redPushers : blackPushers;
+        int count = 0;
+
+        for (int i = 0; i < 64; i++) {
+            if ((pushers & (1L << i)) != 0) {
+                int row = i / 8;
+                int col = i % 8;
+
+                if (isExposed(player, row, col)) count++;
+            }
+        }
+
+        return count;
     }
 }
